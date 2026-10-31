@@ -40,7 +40,7 @@ flowchart LR
 - **Teste:** testes unitários passam; criar, editar e excluir um perfil por script e ver o banco persistir.
 
 ## Parte 2 — Motor rclone e CLI
-**Status:** ⬜ Pendente
+**Status:** ✅ Concluída (2026-10-31), aguardando validação do usuário
 
 - Localizar rclone (app → `PATH` → orientação), checar versão mínima.
 - `RcloneAdapter`: montar comando do `bisync`, `--resync` automático na primeira vez (com segurança), `--dry-run`, `--max-delete`, lock por perfil, leitura do `--use-json-log`.
@@ -155,6 +155,7 @@ Cada conversa adiciona aqui, ao concluir sua Parte, o que decidiu ou mudou em re
 | — | 2026-10-30 | Decisões iniciais: ver `AGENTS.md` e `PROPOSTA_ARQUITETURA.md` §0 |
 | 0 | 2026-10-31 | Ambiente conda `pontis-dev` criado em `~/miniconda3` (Python 3.12). Entry point `pontis = pontis.app:main`; janela vazia em `src/pontis/app.py`. `mypy` em modo `strict`; ruff com regras E,F,W,I,B,UP,SIM; hook mypy do pre-commit é `local` (usa o ambiente ativo). Testes de UI rodam com `QT_QPA_PLATFORM=offscreen`. Pasta `PontisTeste/` no Drive: a criar pelo usuário. |
 | 1 | 2026-10-31 | Domínio em `domain/models.py` (dataclasses + enums StrEnum, serialização JSON). Padrão de conflito `keep_both` e `max_delete_percent=50`. SQLite em `infra/database.py` com migrações via `PRAGMA user_version` (lista `MIGRATIONS`, nunca editar entradas antigas; sem `;` dentro dos scripts). Tabelas `profiles` (nome único; `schedule` JSON, NULL = manual) e `runs` (FK com cascade). Repositórios em `infra/repositories.py`; `infra/paths.py` (platformdirs); `SchedulerBackend` (Protocol sem implementação). Sem camada `services/` ainda (virá com as Partes 2+). Script manual: `scripts/demo_profiles.py`. Rodar ruff/mypy/pytest exige o env conda fora do sandbox do agente. |
+| 2 | 2026-10-31 | `infra/rclone.py` (localização: caminho configurado → `<data>/bin/rclone` → `PATH`; versão mínima **1.66.0**), `infra/rclone_adapter.py` (`RcloneAdapter`), `infra/locking.py` (lock por perfil via `flock`, só POSIX), `services/run_service.py` (`RunService`), `cli.py` e `i18n/__init__.py` (catálogo simples pt_BR/en para o CLI; a ponte com Qt vem na Parte 4). Bisync usa `--workdir` próprio por perfil (`<dir do banco>/bisync/<id>`), assim "primeira vez" = nenhum `*.lst` no workdir. Primeira execução: `--resync --resync-mode newer` (nunca apaga); execuções normais: `--conflict-resolve` conforme a política (`keep_both` = `none`) e `--max-delete <percent>`. **Segurança extra:** a 1ª execução real exige um `--dry-run` bem-sucedido no histórico (`--skip-first-dry-run` ignora); pasta local inexistente aborta antes do rclone; `--resync` nunca é repetido após falha; `extra_flags` com flags gerenciadas pelo app (`--resync`, `--config`, `--max-delete`…) são recusadas. Direções unidirecionais usam `rclone sync` (**sem** `--max-delete` percentual, pois só existe contagem no `sync`). `pontis` sem argumentos abre a janela; com argumentos vira CLI (`--db` opcional para testes). O CLI sempre passa `--config` com o `rclone.conf` do app (`~/.config/pontis/rclone.conf`); `--rclone-config` permite apontar um arquivo explícito (útil até a Parte 3 importar o seu). Ctrl+C termina o rclone e grava a execução como `cancelled`. |
 
 ## Como pedir cada Parte (modelo de mensagem)
 Abra uma conversa nova e escreva:

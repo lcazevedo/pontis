@@ -20,6 +20,9 @@ def main() -> None:
     db = Path(sys.argv[2]) if len(sys.argv) > 2 else Path(tempfile.gettempdir()) / "pontis_demo.db"
     repo = ProfileRepository(database.connect(db))
     if action == "create":
+        if repo.get_by_name("Demo"):
+            print("O perfil 'Demo' já existe; use 'delete' antes de criar de novo.")
+            return
         repo.add(
             SyncProfile(
                 name="Demo",
