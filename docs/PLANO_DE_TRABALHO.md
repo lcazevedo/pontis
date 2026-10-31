@@ -32,7 +32,7 @@ flowchart LR
 - **Teste:** `conda activate pontis-dev`, `pontis` abre uma janela em branco; `pytest`, `ruff check` e `mypy` passam.
 
 ## Parte 1 — Domínio e persistência (SQLite)
-**Status:** ⬜ Pendente
+**Status:** ✅ Concluída (2026-10-31), aguardando validação do usuário
 
 - Modelos: `SyncProfile`, `Endpoint`, `SyncOptions`, `Schedule` (só `manual`), `RunResult`.
 - SQLite com migrações versionadas, diretórios via `platformdirs`; repositórios (CRUD de perfis, histórico).
@@ -154,6 +154,7 @@ Cada conversa adiciona aqui, ao concluir sua Parte, o que decidiu ou mudou em re
 |---|---|---|
 | — | 2026-10-30 | Decisões iniciais: ver `AGENTS.md` e `PROPOSTA_ARQUITETURA.md` §0 |
 | 0 | 2026-10-31 | Ambiente conda `pontis-dev` criado em `~/miniconda3` (Python 3.12). Entry point `pontis = pontis.app:main`; janela vazia em `src/pontis/app.py`. `mypy` em modo `strict`; ruff com regras E,F,W,I,B,UP,SIM; hook mypy do pre-commit é `local` (usa o ambiente ativo). Testes de UI rodam com `QT_QPA_PLATFORM=offscreen`. Pasta `PontisTeste/` no Drive: a criar pelo usuário. |
+| 1 | 2026-10-31 | Domínio em `domain/models.py` (dataclasses + enums StrEnum, serialização JSON). Padrão de conflito `keep_both` e `max_delete_percent=50`. SQLite em `infra/database.py` com migrações via `PRAGMA user_version` (lista `MIGRATIONS`, nunca editar entradas antigas; sem `;` dentro dos scripts). Tabelas `profiles` (nome único; `schedule` JSON, NULL = manual) e `runs` (FK com cascade). Repositórios em `infra/repositories.py`; `infra/paths.py` (platformdirs); `SchedulerBackend` (Protocol sem implementação). Sem camada `services/` ainda (virá com as Partes 2+). Script manual: `scripts/demo_profiles.py`. Rodar ruff/mypy/pytest exige o env conda fora do sandbox do agente. |
 
 ## Como pedir cada Parte (modelo de mensagem)
 Abra uma conversa nova e escreva:
