@@ -1,0 +1,13 @@
+{
+  "version": "0.2.0",
+  "configurations": [
+    {
+      "name": "Pontis",
+      "type": "debugpy",
+      "request": "launch",
+      "module": "pontis",
+      "python": "${userHome}/miniconda3/envs/pontis-dev/bin/python",
+      "console": "integratedTerminal"
+    }
+  ]
+}
