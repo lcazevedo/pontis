@@ -112,10 +112,12 @@ class RcloneAdapter:
         binary: Path | str,
         state_root: Path,
         config_path: Path | None = None,
+        env: dict[str, str] | None = None,
     ) -> None:
         self._binary = str(binary)
         self._state_root = state_root
         self._config_path = config_path
+        self._env = dict(env) if env is not None else None
 
     def workdir(self, profile: SyncProfile) -> Path:
         """Bisync state directory of a profile."""
@@ -206,6 +208,7 @@ class RcloneAdapter:
             stderr=subprocess.PIPE,
             text=True,
             errors="replace",
+            env=self._env,
         )
         assert proc.stderr is not None
         try:

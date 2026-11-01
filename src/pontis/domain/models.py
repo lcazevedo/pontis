@@ -200,3 +200,39 @@ class RunResult:
     errors: int = 0
     message: str = ""
     id: int | None = None
+
+
+@dataclass(frozen=True, slots=True)
+class RemoteInfo:
+    """A configured cloud remote in rclone."""
+
+    name: str
+    type: str
+    parameters: dict[str, str] = field(default_factory=dict)
+
+    def to_dict(self) -> dict[str, Any]:
+        """Serialize to a JSON-friendly dict."""
+        return {
+            "name": self.name,
+            "type": self.type,
+            "parameters": dict(self.parameters),
+        }
+
+    @classmethod
+    def from_dict(cls, data: dict[str, Any]) -> RemoteInfo:
+        """Deserialize from :meth:`to_dict` output."""
+        return cls(
+            name=str(data["name"]),
+            type=str(data.get("type", "")),
+            parameters={str(k): str(v) for k, v in data.get("parameters", {}).items()},
+        )
+
+
+@dataclass(frozen=True, slots=True)
+class RemoteTestResult:
+    """Outcome of testing a remote connection."""
+
+    remote: str
+    success: bool
+    message: str = ""
+    storage_info: dict[str, Any] | None = None

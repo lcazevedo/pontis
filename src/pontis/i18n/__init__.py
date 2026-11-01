@@ -45,6 +45,33 @@ _CATALOG: dict[str, dict[str, str]] = {
         "rclone.too_old": "rclone {found} is too old; version {minimum} or newer is required.",
         "rclone.config_missing": "rclone config file not found: {path}",
         "error.flag": "Invalid option: {error}",
+        "remote.none": (
+            "No cloud remotes configured yet. Add one with 'pontis remote add' or "
+            "'pontis remote import'."
+        ),
+        "remote.added": "Remote '{name}' ({type}) configured successfully.",
+        "remote.duplicate": "A remote named '{name}' already exists.",
+        "remote.removed": "Remote '{name}' removed.",
+        "remote.not_found": "Remote '{name}' not found.",
+        "remote.invalid_name": (
+            "Invalid remote name '{name}'. Names must start with an alphanumeric character "
+            "and contain no colons."
+        ),
+        "remote.operation_failed": "Remote operation failed: {error}",
+        "remote.test_success": "Remote '{name}': connected successfully.",
+        "remote.test_success_storage": (
+            "Remote '{name}': connected successfully (Total: {total}, Used: {used}, Free: {free})."
+        ),
+        "remote.test_failed": "Remote '{name}': connection test failed.\n{message}",
+        "remote.imported": "Successfully imported {count} remote(s): {names}",
+        "remote.import_none": "No remotes were imported.",
+        "remote.import_source_not_found": "Source config file not found: {path}",
+        "remote.password_set": "Configuration password stored in the system keyring.",
+        "remote.password_removed": "Configuration password removed from the system keyring.",
+        "remote.password_status_set": (
+            "A configuration password is currently stored in the keyring."
+        ),
+        "remote.password_status_not_set": "No configuration password stored in the keyring.",
     },
     "pt_BR": {
         "profile.added": "Perfil '{name}' criado (id {id}).",
@@ -83,6 +110,35 @@ _CATALOG: dict[str, dict[str, str]] = {
         ),
         "rclone.config_missing": "Arquivo de configuração do rclone não encontrado: {path}",
         "error.flag": "Opção inválida: {error}",
+        "remote.none": (
+            "Nenhum remoto em nuvem configurado ainda. Adicione um com 'pontis remote add' ou "
+            "'pontis remote import'."
+        ),
+        "remote.added": "Remoto '{name}' ({type}) configurado com sucesso.",
+        "remote.duplicate": "Já existe um remoto chamado '{name}'.",
+        "remote.removed": "Remoto '{name}' removido.",
+        "remote.not_found": "Remoto '{name}' não encontrado.",
+        "remote.invalid_name": (
+            "Nome de remoto inválido '{name}'. Nomes devem começar com letra/número e não conter "
+            "dois-pontos."
+        ),
+        "remote.operation_failed": "Operação de remoto falhou: {error}",
+        "remote.test_success": "Remoto '{name}': conexão bem-sucedida.",
+        "remote.test_success_storage": (
+            "Remoto '{name}': conexão bem-sucedida (Total: {total}, Usado: {used}, Livre: {free})."
+        ),
+        "remote.test_failed": "Remoto '{name}': o teste de conexão falhou.\n{message}",
+        "remote.imported": "{count} remoto(s) importado(s) com sucesso: {names}",
+        "remote.import_none": "Nenhum remoto foi importado.",
+        "remote.import_source_not_found": (
+            "Arquivo de configuração de origem não encontrado: {path}"
+        ),
+        "remote.password_set": "Senha de configuração salva no chaveiro do sistema.",
+        "remote.password_removed": "Senha de configuração removida do chaveiro do sistema.",
+        "remote.password_status_set": (
+            "Uma senha de configuração está atualmente salva no chaveiro."
+        ),
+        "remote.password_status_not_set": "Nenhuma senha de configuração salva no chaveiro.",
     },
 }
 
