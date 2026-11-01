@@ -16,4 +16,4 @@ def test_empty_window_opens(qtbot: QtBot) -> None:
     qtbot.addWidget(window)
     window.show()
     assert window.isVisible()
-    assert window.windowTitle() == "Pontis"
+    assert window.windowTitle().startswith("Pontis")

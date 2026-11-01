@@ -178,7 +178,7 @@ def test_remote_service_import_config(tmp_path: Path, rclone_path: Path) -> None
 
     dest_conf = tmp_path / "dest.conf"
     dest_conf.write_text(
-        "[remote_a]\n" "type = alias\n" "remote = /tmp/dir_original\n",
+        "[remote_a]\ntype = alias\nremote = /tmp/dir_original\n",
         encoding="utf-8",
     )
 
@@ -291,7 +291,7 @@ def test_cli_remote_import_and_password(tmp_path: Path, capsys: pytest.CaptureFi
     config_path = tmp_path / "pontis_rclone.conf"
     source_conf = tmp_path / "imported.conf"
     source_conf.write_text(
-        "[imported_remote]\n" "type = alias\n" "remote = /tmp\n",
+        "[imported_remote]\ntype = alias\nremote = /tmp\n",
         encoding="utf-8",
     )
 
