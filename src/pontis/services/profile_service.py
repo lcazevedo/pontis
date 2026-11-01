@@ -71,6 +71,10 @@ class ProfileService:
         """Persist a new profile and return it with an assigned id."""
         return self._profile_repo.add(profile)
 
+    def update_profile(self, profile: SyncProfile) -> SyncProfile:
+        """Persist changes to an existing profile."""
+        return self._profile_repo.update(profile)
+
     def delete_profile(self, profile_id: int) -> None:
         """Delete a profile and its associated run records."""
         self._profile_repo.delete(profile_id)

@@ -23,10 +23,14 @@ from PySide6.QtWidgets import (
 
 from pontis.domain.models import RunStatus, SyncDirection
 from pontis.i18n import tr
+from pontis.infra.paths import config_dir
+from pontis.infra.rclone import locate_rclone
 from pontis.services.profile_service import ProfileService, ProfileSummary
+from pontis.services.remote_service import RemoteService
 from pontis.ui.icons import get_icon
 from pontis.ui.theme import ThemeMode, apply_theme
 from pontis.ui.widgets.empty_state import EmptyStateWidget
+from pontis.ui.wizard import ProfileWizard
 
 if TYPE_CHECKING:
     from pathlib import Path
@@ -38,11 +42,28 @@ class MainWindow(QMainWindow):
     def __init__(
         self,
         service: ProfileService | None = None,
+        remote_service: RemoteService | None = None,
         db_path: Path | None = None,
+        rclone_binary: Path | str | None = None,
+        rclone_config: Path | None = None,
         parent: QWidget | None = None,
     ) -> None:
         super().__init__(parent)
         self._service = service if service is not None else ProfileService(db_path=db_path)
+        if remote_service is not None:
+            self._remote_service = remote_service
+        else:
+            config_file = rclone_config or (config_dir() / "rclone.conf")
+            bin_path: Path | str
+            if rclone_binary is not None:
+                bin_path = rclone_binary
+            else:
+                try:
+                    bin_path = locate_rclone().path
+                except Exception:
+                    bin_path = "rclone"
+            self._remote_service = RemoteService(binary=bin_path, config_path=config_file)
+
         self._summaries: list[ProfileSummary] = []
         self._current_theme: ThemeMode = ThemeMode.SYSTEM
 
@@ -68,6 +89,12 @@ class MainWindow(QMainWindow):
         self._action_new.setShortcut(QKeySequence("Ctrl+N"))
         self._action_new.triggered.connect(self._on_new_profile)
 
+        self._action_edit = QAction(get_icon("document-edit"), tr("ui.actions.edit"), self)
+        self._action_edit.setToolTip(tr("ui.actions.edit.tooltip"))
+        self._action_edit.setShortcut(QKeySequence("Ctrl+E"))
+        self._action_edit.setEnabled(False)
+        self._action_edit.triggered.connect(self._on_edit_profile)
+
         self._action_delete = QAction(get_icon("edit-delete"), tr("ui.actions.delete"), self)
         self._action_delete.setToolTip(tr("ui.actions.delete.tooltip"))
         self._action_delete.setShortcut(QKeySequence(QKeySequence.StandardKey.Delete))
@@ -91,6 +118,7 @@ class MainWindow(QMainWindow):
         toolbar.setToolButtonStyle(Qt.ToolButtonStyle.ToolButtonTextBesideIcon)
 
         toolbar.addAction(self._action_new)
+        toolbar.addAction(self._action_edit)
         toolbar.addAction(self._action_delete)
         toolbar.addAction(self._action_refresh)
         toolbar.addSeparator()
@@ -143,6 +171,8 @@ class MainWindow(QMainWindow):
         file_menu.addAction(self._action_quit)
 
         profile_menu = menubar.addMenu(tr("ui.menu.profile"))
+        profile_menu.addAction(self._action_new)
+        profile_menu.addAction(self._action_edit)
         profile_menu.addAction(self._action_delete)
         profile_menu.addAction(self._action_refresh)
 
@@ -185,6 +215,7 @@ class MainWindow(QMainWindow):
         header.setSectionResizeMode(5, QHeaderView.ResizeMode.ResizeToContents)
 
         self._table.itemSelectionChanged.connect(self._on_selection_changed)
+        self._table.cellDoubleClicked.connect(self._on_table_cell_double_clicked)
         self._table.setContextMenuPolicy(Qt.ContextMenuPolicy.CustomContextMenu)
         self._table.customContextMenuRequested.connect(self._on_table_context_menu)
 
@@ -205,6 +236,7 @@ class MainWindow(QMainWindow):
             self._table.setRowCount(0)
             self._stack.setCurrentIndex(1)
             self._action_delete.setEnabled(False)
+            self._action_edit.setEnabled(False)
             self.statusBar().showMessage(tr("ui.statusbar.profiles_count", count=0))
             return
 
@@ -286,22 +318,52 @@ class MainWindow(QMainWindow):
         """Update action availability based on table selection."""
         selected = self._selected_summary()
         self._action_delete.setEnabled(selected is not None)
+        self._action_edit.setEnabled(selected is not None)
 
     def _on_table_context_menu(self, pos: QPoint) -> None:
         """Show context menu on right-click."""
         menu = QMenu(self)
         if self._selected_summary() is not None:
+            menu.addAction(self._action_edit)
             menu.addAction(self._action_delete)
+            menu.addSeparator()
+        menu.addAction(self._action_new)
         menu.addAction(self._action_refresh)
         menu.exec(self._table.viewport().mapToGlobal(pos))
 
     def _on_new_profile(self) -> None:
-        """Handle 'New Profile' request; shows a placeholder dialog until Part 5."""
-        QMessageBox.information(
-            self,
-            tr("ui.dialog.coming_soon.title"),
-            tr("ui.dialog.coming_soon.message"),
+        """Open the wizard to create a new sync profile."""
+        wizard = ProfileWizard(
+            service=self._service,
+            remote_service=self._remote_service,
+            parent=self,
         )
+        if wizard.exec() and wizard.saved_profile is not None:
+            self.statusBar().showMessage(
+                tr("ui.statusbar.profile_created", name=wizard.saved_profile.name), 4000
+            )
+            self.load_profiles()
+
+    def _on_edit_profile(self) -> None:
+        """Open the wizard to edit the selected sync profile."""
+        summary = self._selected_summary()
+        if summary is None:
+            return
+        wizard = ProfileWizard(
+            service=self._service,
+            remote_service=self._remote_service,
+            profile=summary.profile,
+            parent=self,
+        )
+        if wizard.exec() and wizard.saved_profile is not None:
+            self.statusBar().showMessage(
+                tr("ui.statusbar.profile_updated", name=wizard.saved_profile.name), 4000
+            )
+            self.load_profiles()
+
+    def _on_table_cell_double_clicked(self, row: int, column: int) -> None:
+        """Double clicking a row triggers profile edition."""
+        self._on_edit_profile()
 
     def _on_delete_profile(self) -> None:
         """Prompt confirmation and delete the selected profile from SQLite."""

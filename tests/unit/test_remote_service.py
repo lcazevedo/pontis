@@ -332,3 +332,23 @@ def test_cli_remote_import_and_password(tmp_path: Path, capsys: pytest.CaptureFi
         ret = main(["remote", "password", "remove"])
         assert ret == 0
         mock_del.assert_called_once()
+
+
+def test_remote_service_list_directories(rclone_path: Path, tmp_path: Path) -> None:
+    config_path = tmp_path / "rclone.conf"
+    keyring_store = FakeKeyringStore()
+    svc = RemoteService(binary=rclone_path, config_path=config_path, keyring_store=keyring_store)
+
+    target_dir = tmp_path / "alias_target"
+    target_dir.mkdir()
+    (target_dir / "FolderB").mkdir()
+    (target_dir / "FolderA").mkdir()
+    (target_dir / "file.txt").write_text("hello", encoding="utf-8")
+
+    svc.add_remote("myalias", "alias", {"remote": str(target_dir)})
+
+    dirs = svc.list_directories("myalias")
+    assert dirs == ["FolderA", "FolderB"]
+
+    with pytest.raises(RemoteNotFoundError):
+        svc.list_directories("unknown_remote")

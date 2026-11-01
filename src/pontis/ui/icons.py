@@ -62,6 +62,38 @@ def _create_fallback_icon(name: str) -> QIcon:
         painter.setPen(Qt.PenStyle.NoPen)
         painter.setBrush(QColor(25, 118, 210))
         painter.drawEllipse(6, 6, 12, 12)
+    elif name in ("document-edit", "edit"):
+        pen = QPen(QColor(2, 136, 209), 2.0, Qt.PenStyle.SolidLine, Qt.PenCapStyle.RoundCap)
+        painter.setPen(pen)
+        painter.drawLine(5, 19, 9, 19)
+        painter.drawLine(7, 17, 16, 8)
+        painter.drawLine(14, 6, 18, 10)
+    elif name in ("folder", "folder-open"):
+        painter.setPen(QPen(QColor(217, 119, 6), 1.5))
+        painter.setBrush(QColor(245, 158, 11))
+        painter.drawRect(4, 8, 16, 11)
+        painter.drawRect(4, 6, 8, 3)
+    elif name in ("folder-remote", "network-server"):
+        painter.setPen(QPen(QColor(14, 116, 144), 1.5))
+        painter.setBrush(QColor(6, 182, 212))
+        painter.drawRect(4, 9, 16, 10)
+        painter.drawLine(12, 4, 12, 8)
+        painter.drawEllipse(10, 2, 4, 4)
+    elif name in ("go-up", "up"):
+        pen = QPen(QColor(71, 85, 105), 2.0, Qt.PenStyle.SolidLine, Qt.PenCapStyle.RoundCap)
+        painter.setPen(pen)
+        painter.drawLine(12, 6, 12, 18)
+        painter.drawLine(7, 11, 12, 6)
+        painter.drawLine(17, 11, 12, 6)
+    elif name in ("folder-new", "folder-add"):
+        painter.setPen(QPen(QColor(217, 119, 6), 1.5))
+        painter.setBrush(QColor(245, 158, 11))
+        painter.drawRect(4, 8, 12, 11)
+        painter.drawRect(4, 6, 7, 3)
+        pen_plus = QPen(QColor(46, 125, 50), 2.0, Qt.PenStyle.SolidLine, Qt.PenCapStyle.RoundCap)
+        painter.setPen(pen_plus)
+        painter.drawLine(18, 14, 18, 20)
+        painter.drawLine(15, 17, 21, 17)
     elif name == "status_cancelled":
         painter.setPen(Qt.PenStyle.NoPen)
         painter.setBrush(QColor(239, 108, 0))

@@ -99,3 +99,23 @@ def test_delete_profile(temp_service: ProfileService) -> None:
 
     with pytest.raises(ProfileNotFoundError):
         temp_service.get_profile(p.id)
+
+
+def test_update_profile(temp_service: ProfileService) -> None:
+    p = temp_service.add_profile(
+        SyncProfile(
+            name="OriginalName",
+            side_a=Endpoint.local("/tmp/orig_a"),
+            side_b=Endpoint.local("/tmp/orig_b"),
+        )
+    )
+    assert p.id is not None
+
+    p.name = "NewName"
+    p.side_a = Endpoint.local("/tmp/new_a")
+    updated = temp_service.update_profile(p)
+
+    assert updated.name == "NewName"
+    found = temp_service.get_profile(p.id)
+    assert found.name == "NewName"
+    assert found.side_a.path == "/tmp/new_a"

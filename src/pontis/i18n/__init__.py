@@ -87,6 +87,8 @@ _CATALOG: dict[str, dict[str, str]] = {
         # GUI: Actions
         "ui.actions.new": "New Profile",
         "ui.actions.new.tooltip": "Create a new sync profile",
+        "ui.actions.edit": "Edit",
+        "ui.actions.edit.tooltip": "Edit the selected sync profile",
         "ui.actions.delete": "Delete",
         "ui.actions.delete.tooltip": "Delete the selected sync profile",
         "ui.actions.refresh": "Refresh",
@@ -137,6 +139,97 @@ _CATALOG: dict[str, dict[str, str]] = {
         "ui.statusbar.ready": "Ready",
         "ui.statusbar.profiles_count": "{count} profile(s)",
         "ui.statusbar.profile_deleted": "Profile '{name}' deleted.",
+        "ui.statusbar.profile_created": "Profile '{name}' created.",
+        "ui.statusbar.profile_updated": "Profile '{name}' updated.",
+        # GUI: Profile Wizard
+        "ui.wizard.title_new": "New Sync Profile",
+        "ui.wizard.title_edit": "Edit Profile: {name}",
+        "ui.wizard.btn_back": "< Back",
+        "ui.wizard.btn_next": "Next >",
+        "ui.wizard.btn_finish": "Finish",
+        "ui.wizard.btn_cancel": "Cancel",
+        "ui.wizard.name.title": "Profile Identification",
+        "ui.wizard.name.subtitle": "Choose a unique name for this sync profile.",
+        "ui.wizard.name.label": "Profile Name:",
+        "ui.wizard.name.placeholder": "e.g., Work Documents",
+        "ui.wizard.name.error_empty": "Profile name cannot be empty.",
+        "ui.wizard.name.error_duplicate": "A profile with this name already exists.",
+        "ui.wizard.side_a.title": "Side A (Source / Folder 1)",
+        "ui.wizard.side_a.subtitle": (
+            "Select whether Side A is a local directory or a cloud remote."
+        ),
+        "ui.wizard.side_b.title": "Side B (Destination / Folder 2)",
+        "ui.wizard.side_b.subtitle": (
+            "Select whether Side B is a local directory or a cloud remote."
+        ),
+        "ui.wizard.side_b.error_same": "Side A and Side B cannot point to the exact same location.",
+        "ui.endpoint.kind_local": "Local Folder",
+        "ui.endpoint.kind_remote": "Cloud Storage (Remote)",
+        "ui.endpoint.local_path": "Local Path:",
+        "ui.endpoint.browse_local": "Browse...",
+        "ui.endpoint.remote_name": "Cloud Remote:",
+        "ui.endpoint.remote_path": "Folder inside Remote:",
+        "ui.endpoint.browse_remote": "Browse Cloud...",
+        "ui.endpoint.no_remotes": (
+            "No cloud remotes configured yet. "
+            "Use 'pontis remote add' in the terminal to configure one."
+        ),
+        "ui.endpoint.error_no_local_path": "Please select a local path.",
+        "ui.endpoint.error_no_remote": "Please select a cloud remote.",
+        "ui.endpoint.dialog_select_local": "Select Local Folder",
+        "ui.wizard.direction.title": "Sync Direction",
+        "ui.wizard.direction.subtitle": "Select how files should flow between Side A and Side B.",
+        "ui.wizard.direction.bidirectional": "Two-Way / Bidirectional (↔)",
+        "ui.wizard.direction.bidirectional_desc": (
+            "Recommended: changes on either side are replicated to the other."
+        ),
+        "ui.wizard.direction.a_to_b": "One-Way: Side A to Side B (→)",
+        "ui.wizard.direction.a_to_b_desc": (
+            "Mirror changes from Side A to Side B. Side B changes will not affect Side A."
+        ),
+        "ui.wizard.direction.b_to_a": "One-Way: Side B to Side A (←)",
+        "ui.wizard.direction.b_to_a_desc": (
+            "Mirror changes from Side B to Side A. Side A changes will not affect Side B."
+        ),
+        "ui.wizard.conflict.title": "Conflict Resolution & Scheduling",
+        "ui.wizard.conflict.subtitle": (
+            "Choose how to handle files modified simultaneously on both sides."
+        ),
+        "ui.wizard.conflict.group": "Conflict Policy",
+        "ui.wizard.conflict.keep_both": "Keep both versions (safer, adds .conflict suffix)",
+        "ui.wizard.conflict.newer": "Keep the most recently modified file",
+        "ui.wizard.conflict.larger": "Keep the larger file",
+        "ui.wizard.conflict.path1": "Keep Side A version",
+        "ui.wizard.conflict.path2": "Keep Side B version",
+        "ui.wizard.schedule.group": "Execution Schedule",
+        "ui.wizard.schedule.manual": "Manual execution only (default)",
+        "ui.wizard.schedule.interval": "Run periodically (coming soon)",
+        "ui.wizard.schedule.notice": (
+            "Automatic background scheduling is reserved for future versions. "
+            "In v1, sync runs on demand."
+        ),
+        "ui.wizard.summary.title": "Configuration Summary",
+        "ui.wizard.summary.subtitle": "Review the profile settings before saving.",
+        "ui.wizard.summary.name": "Profile Name:",
+        "ui.wizard.summary.side_a": "Side A:",
+        "ui.wizard.summary.direction": "Direction:",
+        "ui.wizard.summary.side_b": "Side B:",
+        "ui.wizard.summary.conflict": "Conflict Policy:",
+        "ui.wizard.summary.schedule": "Schedule:",
+        # GUI: Cloud Browser
+        "ui.cloud_browser.title": "Browse Cloud Remote",
+        "ui.cloud_browser.remote": "Remote:",
+        "ui.cloud_browser.path": "Current Path:",
+        "ui.cloud_browser.root": "(Root folder)",
+        "ui.cloud_browser.up": "Up",
+        "ui.cloud_browser.refresh": "Refresh",
+        "ui.cloud_browser.new_folder": "New Folder",
+        "ui.cloud_browser.select_current": "Select Current Folder",
+        "ui.cloud_browser.loading": "Loading folders...",
+        "ui.cloud_browser.empty": "No subdirectories found.",
+        "ui.cloud_browser.error": "Could not list directories: {error}",
+        "ui.cloud_browser.new_folder_title": "Create Folder",
+        "ui.cloud_browser.new_folder_prompt": "Folder name:",
     },
     "pt_BR": {
         # Profile CLI messages
@@ -218,6 +311,8 @@ _CATALOG: dict[str, dict[str, str]] = {
         # GUI: Actions
         "ui.actions.new": "Novo Perfil",
         "ui.actions.new.tooltip": "Criar um novo perfil de sincronização",
+        "ui.actions.edit": "Editar",
+        "ui.actions.edit.tooltip": "Editar o perfil de sincronização selecionado",
         "ui.actions.delete": "Excluir",
         "ui.actions.delete.tooltip": "Excluir o perfil de sincronização selecionado",
         "ui.actions.refresh": "Atualizar",
@@ -268,6 +363,101 @@ _CATALOG: dict[str, dict[str, str]] = {
         "ui.statusbar.ready": "Pronto",
         "ui.statusbar.profiles_count": "{count} perfil(is)",
         "ui.statusbar.profile_deleted": "Perfil '{name}' excluído.",
+        "ui.statusbar.profile_created": "Perfil '{name}' criado com sucesso.",
+        "ui.statusbar.profile_updated": "Perfil '{name}' atualizado com sucesso.",
+        # GUI: Profile Wizard
+        "ui.wizard.title_new": "Novo Perfil de Sincronização",
+        "ui.wizard.title_edit": "Editar Perfil: {name}",
+        "ui.wizard.btn_back": "< Voltar",
+        "ui.wizard.btn_next": "Avançar >",
+        "ui.wizard.btn_finish": "Concluir",
+        "ui.wizard.btn_cancel": "Cancelar",
+        "ui.wizard.name.title": "Identificação do Perfil",
+        "ui.wizard.name.subtitle": "Escolha um nome único para este perfil de sincronização.",
+        "ui.wizard.name.label": "Nome do Perfil:",
+        "ui.wizard.name.placeholder": "ex: Documentos Trabalho",
+        "ui.wizard.name.error_empty": "O nome do perfil não pode ficar em branco.",
+        "ui.wizard.name.error_duplicate": "Já existe um perfil com este nome.",
+        "ui.wizard.side_a.title": "Lado A (Origem / Pasta 1)",
+        "ui.wizard.side_a.subtitle": (
+            "Selecione se o Lado A é uma pasta local ou um remoto na nuvem."
+        ),
+        "ui.wizard.side_b.title": "Lado B (Destino / Pasta 2)",
+        "ui.wizard.side_b.subtitle": (
+            "Selecione se o Lado B é uma pasta local ou um remoto na nuvem."
+        ),
+        "ui.wizard.side_b.error_same": "O Lado A e o Lado B não podem apontar para o mesmo local.",
+        "ui.endpoint.kind_local": "Pasta Local",
+        "ui.endpoint.kind_remote": "Armazenamento em Nuvem (Remoto)",
+        "ui.endpoint.local_path": "Caminho Local:",
+        "ui.endpoint.browse_local": "Procurar...",
+        "ui.endpoint.remote_name": "Remoto em Nuvem:",
+        "ui.endpoint.remote_path": "Pasta no Remoto:",
+        "ui.endpoint.browse_remote": "Navegar na Nuvem...",
+        "ui.endpoint.no_remotes": (
+            "Nenhum remoto em nuvem configurado. "
+            "Use 'pontis remote add' no terminal para adicionar."
+        ),
+        "ui.endpoint.error_no_local_path": "Por favor selecione um caminho local.",
+        "ui.endpoint.error_no_remote": "Por favor selecione um remoto em nuvem.",
+        "ui.endpoint.dialog_select_local": "Selecionar Pasta Local",
+        "ui.wizard.direction.title": "Direção de Sincronização",
+        "ui.wizard.direction.subtitle": (
+            "Escolha como os arquivos devem trafegar entre o Lado A e o Lado B."
+        ),
+        "ui.wizard.direction.bidirectional": "Bidirecional (↔)",
+        "ui.wizard.direction.bidirectional_desc": (
+            "Recomendado: alterações em qualquer um dos lados são refletidas no outro."
+        ),
+        "ui.wizard.direction.a_to_b": "Unidirecional: Lado A para Lado B (→)",
+        "ui.wizard.direction.a_to_b_desc": (
+            "Espelha alterações do Lado A para o Lado B. Alterações em B não afetam A."
+        ),
+        "ui.wizard.direction.b_to_a": "Unidirecional: Lado B para Lado A (←)",
+        "ui.wizard.direction.b_to_a_desc": (
+            "Espelha alterações do Lado B para o Lado A. Alterações em A não afetam B."
+        ),
+        "ui.wizard.conflict.title": "Resolução de Conflitos e Agendamento",
+        "ui.wizard.conflict.subtitle": (
+            "Escolha como tratar arquivos alterados simultaneamente nos dois lados."
+        ),
+        "ui.wizard.conflict.group": "Política de Conflito",
+        "ui.wizard.conflict.keep_both": (
+            "Manter ambas as versões (mais seguro, adiciona sufixo .conflict)"
+        ),
+        "ui.wizard.conflict.newer": "Manter o arquivo modificado mais recentemente",
+        "ui.wizard.conflict.larger": "Manter o arquivo com maior tamanho",
+        "ui.wizard.conflict.path1": "Manter a versão do Lado A",
+        "ui.wizard.conflict.path2": "Manter a versão do Lado B",
+        "ui.wizard.schedule.group": "Agendamento de Execução",
+        "ui.wizard.schedule.manual": "Execução somente manual (padrão)",
+        "ui.wizard.schedule.interval": "Executar periodicamente (em breve)",
+        "ui.wizard.schedule.notice": (
+            "O agendamento automático em segundo plano está reservado para versões futuras. "
+            "Na v1, a sincronização é manual."
+        ),
+        "ui.wizard.summary.title": "Resumo da Configuração",
+        "ui.wizard.summary.subtitle": "Revise as configurações do perfil antes de salvar.",
+        "ui.wizard.summary.name": "Nome do Perfil:",
+        "ui.wizard.summary.side_a": "Lado A:",
+        "ui.wizard.summary.direction": "Direção:",
+        "ui.wizard.summary.side_b": "Lado B:",
+        "ui.wizard.summary.conflict": "Política de Conflito:",
+        "ui.wizard.summary.schedule": "Agendamento:",
+        # GUI: Cloud Browser
+        "ui.cloud_browser.title": "Navegar na Nuvem",
+        "ui.cloud_browser.remote": "Remoto:",
+        "ui.cloud_browser.path": "Caminho Atual:",
+        "ui.cloud_browser.root": "(Pasta raiz)",
+        "ui.cloud_browser.up": "Subir",
+        "ui.cloud_browser.refresh": "Atualizar",
+        "ui.cloud_browser.new_folder": "Nova Pasta",
+        "ui.cloud_browser.select_current": "Selecionar Esta Pasta",
+        "ui.cloud_browser.loading": "Carregando pastas...",
+        "ui.cloud_browser.empty": "Nenhuma subpasta encontrada.",
+        "ui.cloud_browser.error": "Não foi possível listar as pastas: {error}",
+        "ui.cloud_browser.new_folder_title": "Criar Pasta",
+        "ui.cloud_browser.new_folder_prompt": "Nome da pasta:",
     },
 }
 

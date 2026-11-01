@@ -280,6 +280,41 @@ class RemoteService:
             message=proc.stderr.strip() or f"rclone exit {proc.returncode}",
         )
 
+    def list_directories(self, remote: str, path: str = "") -> list[str]:
+        """List subdirectories in a remote path.
+
+        Returns subdirectory names sorted alphabetically.
+        """
+        if self.get_remote(remote) is None:
+            raise RemoteNotFoundError(remote)
+
+        target = f"{remote}:{path}"
+        cmd = [
+            str(self.binary),
+            "lsf",
+            target,
+            "--dirs-only",
+            "--config",
+            str(self.config_path),
+        ]
+        try:
+            proc = subprocess.run(
+                cmd,
+                capture_output=True,
+                text=True,
+                env=self._get_env(),
+                check=False,
+            )
+        except OSError as exc:
+            raise RemoteOperationError(str(exc)) from exc
+
+        if proc.returncode != 0:
+            raise RemoteOperationError(proc.stderr.strip() or f"rclone exit {proc.returncode}")
+
+        dirs = [line.rstrip("/") for line in proc.stdout.splitlines() if line.strip()]
+        dirs.sort(key=str.casefold)
+        return dirs
+
     def import_config(
         self,
         source_path: Path,
