@@ -5,8 +5,9 @@ from __future__ import annotations
 
 from pathlib import Path
 
-from PySide6.QtCore import Signal
+from PySide6.QtCore import Qt, Signal
 from PySide6.QtWidgets import (
+    QApplication,
     QButtonGroup,
     QComboBox,
     QFileDialog,
@@ -151,19 +152,29 @@ class EndpointPickerWidget(QWidget):
         remote_name = str(remote_data) if remote_data is not None else None
         current_path = self._edit_remote_path.text().strip()
 
-        dialog = CloudFolderBrowserDialog(
-            remote_service=self._remote_service,
-            initial_remote=remote_name,
-            initial_path=current_path,
-            parent=self,
-        )
-        if dialog.exec():
-            selected_remote = dialog.selected_remote()
-            selected_path = dialog.selected_path()
-            idx = self._remote_combo.findData(selected_remote)
-            if idx >= 0:
-                self._remote_combo.setCurrentIndex(idx)
-            self._edit_remote_path.setText(selected_path)
+        QApplication.setOverrideCursor(Qt.CursorShape.WaitCursor)
+        self._btn_browse_remote.setEnabled(False)
+        try:
+            dialog = CloudFolderBrowserDialog(
+                remote_service=self._remote_service,
+                initial_remote=remote_name,
+                initial_path=current_path,
+                parent=self,
+            )
+            while QApplication.overrideCursor() is not None:
+                QApplication.restoreOverrideCursor()
+
+            if dialog.exec():
+                selected_remote = dialog.selected_remote()
+                selected_path = dialog.selected_path()
+                idx = self._remote_combo.findData(selected_remote)
+                if idx >= 0:
+                    self._remote_combo.setCurrentIndex(idx)
+                self._edit_remote_path.setText(selected_path)
+        finally:
+            while QApplication.overrideCursor() is not None:
+                QApplication.restoreOverrideCursor()
+            self._btn_browse_remote.setEnabled(True)
 
     def set_endpoint(self, endpoint: Endpoint) -> None:
         """Populate the widget controls from an existing Endpoint."""

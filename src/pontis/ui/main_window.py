@@ -23,6 +23,7 @@ from PySide6.QtWidgets import (
 
 from pontis.domain.models import RunResult, RunStatus, SyncDirection, SyncProfile
 from pontis.i18n import tr
+from pontis.infra.database import connect
 from pontis.infra.keyring_store import KEY_RCLONE_CONFIG_PASS, KeyringStore
 from pontis.infra.paths import config_dir, default_db_path
 from pontis.infra.rclone import locate_rclone
@@ -74,6 +75,7 @@ class MainWindow(QMainWindow):
                 binary=self._rclone_binary, config_path=self._rclone_config
             )
 
+        self._run_conn = None
         if run_service is not None:
             self._run_service = run_service
         else:
@@ -88,9 +90,11 @@ class MainWindow(QMainWindow):
                 config_path=self._rclone_config,
                 env=env,
             )
+            # Create a dedicated connection for background runs with check_same_thread=False
+            self._run_conn = connect(db_path, check_same_thread=False)
             self._run_service = RunService(
                 adapter,
-                RunRepository(self._service.connection),
+                RunRepository(self._run_conn),
                 lock_dir=lock_dir,
             )
 
@@ -583,5 +587,7 @@ class MainWindow(QMainWindow):
 
     def closeEvent(self, event: QCloseEvent) -> None:
         """Clean up resources on window close."""
+        if self._run_conn is not None:
+            self._run_conn.close()
         self._service.close()
         super().closeEvent(event)

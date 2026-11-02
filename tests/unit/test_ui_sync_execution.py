@@ -20,14 +20,16 @@ from pontis.domain.models import (
 from pontis.infra.database import connect
 from pontis.infra.locking import ProfileLockedError
 from pontis.infra.rclone_adapter import AdapterOutcome, LogEvent, RcloneAdapter
-from pontis.infra.repositories import ProfileRepository
+from pontis.infra.repositories import ProfileRepository, RunRepository
 from pontis.services.profile_service import ProfileService
+from pontis.services.remote_service import RemoteService
 from pontis.services.run_service import EndpointMissingError, RunService
 from pontis.ui.dry_run_summary_dialog import DryRunSummaryDialog
 from pontis.ui.main_window import MainWindow
 from pontis.ui.notifications import send_notification
 from pontis.ui.sync_progress_dialog import SyncProgressDialog
 from pontis.ui.sync_worker import SyncWorker
+from pontis.ui.widgets.cloud_browser_dialog import CloudFolderBrowserDialog
 
 if TYPE_CHECKING:
     from pathlib import Path
@@ -342,3 +344,54 @@ def test_send_notification_no_throw() -> None:
     # Does not crash in test environment
     send_notification("Test Title", "Test Message", is_error=False)
     send_notification("Error Title", "Error Message", is_error=True)
+
+
+def test_sync_worker_with_real_sqlite_connection_no_thread_error(
+    qtbot: QtBot, tmp_path: Path
+) -> None:
+    db_file = tmp_path / "thread_test.db"
+    conn = connect(db_file, check_same_thread=False)
+    profiles = ProfileRepository(conn)
+    runs = RunRepository(conn)
+    profile = profiles.add(_make_profile(tmp_path, "RealDbProfile", pid=1))
+
+    mock_adapter = MagicMock(spec=RcloneAdapter)
+    mock_adapter.needs_resync.return_value = False
+    mock_adapter.run.return_value = AdapterOutcome(returncode=0, command=[], transfers=1)
+
+    real_run_service = RunService(mock_adapter, runs, lock_dir=tmp_path / "locks")
+    worker = SyncWorker(profile, real_run_service, dry_run=True)
+
+    errors: list[str] = []
+    worker.error_signal.connect(errors.append)
+
+    with qtbot.waitSignal(worker.finished):
+        worker.start()
+
+    # Must finish without any SQLite thread errors
+    assert len(errors) == 0
+    persisted_runs = runs.list_for_profile(profile.id or 0)
+    assert len(persisted_runs) == 1
+    assert persisted_runs[0].status == RunStatus.SUCCESS
+    conn.close()
+
+
+def test_cloud_browser_shows_loading_indicator_and_loads_dirs(
+    qtbot: QtBot,
+) -> None:
+    mock_remote_service = MagicMock(spec=RemoteService)
+    from pontis.domain.models import RemoteInfo
+
+    mock_remote_service.list_remotes.return_value = [RemoteInfo(name="gdrive", type="drive")]
+    mock_remote_service.list_directories.return_value = ["Documents", "Photos", "Backups"]
+
+    dialog = CloudFolderBrowserDialog(
+        remote_service=mock_remote_service,
+        initial_remote="gdrive",
+        initial_path="",
+    )
+    qtbot.addWidget(dialog)
+
+    assert dialog._folder_list.count() == 3
+    assert dialog._folder_list.item(0).text() == "Documents"
+    assert not dialog._lbl_status.isVisible()

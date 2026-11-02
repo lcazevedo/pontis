@@ -70,15 +70,21 @@ def _split(script: str) -> list[str]:
     return [s.strip() for s in script.split(";") if s.strip()]
 
 
-def connect(db_path: Path | str | None = None) -> sqlite3.Connection:
+def connect(
+    db_path: Path | str | None = None,
+    *,
+    check_same_thread: bool = False,
+) -> sqlite3.Connection:
     """Open the database (default: the app data dir) and migrate it to the latest version.
 
     Use ``":memory:"`` for an in-memory database.
     """
     target = default_db_path() if db_path is None else db_path
     # isolation_level=None: autocommit, transactions are managed explicitly.
-    conn = sqlite3.connect(target, isolation_level=None)
+    conn = sqlite3.connect(target, isolation_level=None, check_same_thread=check_same_thread)
     conn.row_factory = sqlite3.Row
     conn.execute("PRAGMA foreign_keys = ON")
+    if target != ":memory:":
+        conn.execute("PRAGMA journal_mode = WAL")
     migrate(conn)
     return conn

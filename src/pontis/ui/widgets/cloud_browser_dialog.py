@@ -6,7 +6,9 @@ from __future__ import annotations
 from typing import TYPE_CHECKING
 
 from PySide6.QtCore import Qt
+from PySide6.QtGui import QCloseEvent
 from PySide6.QtWidgets import (
+    QApplication,
     QComboBox,
     QDialog,
     QDialogButtonBox,
@@ -45,7 +47,8 @@ class CloudFolderBrowserDialog(QDialog):
         self._selected_path = self._current_path
 
         self.setWindowTitle(tr("ui.cloud_browser.title"))
-        self.resize(520, 420)
+        self.resize(540, 440)
+        self.setWindowIcon(get_icon("folder-remote"))
 
         self._init_ui(initial_remote)
         self._load_remotes(initial_remote)
@@ -88,6 +91,15 @@ class CloudFolderBrowserDialog(QDialog):
         nav_layout.addWidget(self._btn_new_folder)
         layout.addLayout(nav_layout)
 
+        # Status / Loading indicator banner
+        self._lbl_status = QLabel(self)
+        self._lbl_status.setStyleSheet(
+            "QLabel { background-color: #e0f2fe; color: #0369a1; "
+            "padding: 6px; border-radius: 4px; font-weight: bold; font-size: 11px; }"
+        )
+        self._lbl_status.setVisible(False)
+        layout.addWidget(self._lbl_status)
+
         # Folder list
         self._folder_list = QListWidget(self)
         self._folder_list.itemDoubleClicked.connect(self._on_item_double_clicked)
@@ -115,6 +127,7 @@ class CloudFolderBrowserDialog(QDialog):
             remotes = self._remote_service.list_remotes()
         except RemoteOperationError:
             remotes = []
+        self._remote_combo.blockSignals(True)
         self._remote_combo.clear()
         target_index = 0
         for idx, r in enumerate(remotes):
@@ -124,8 +137,10 @@ class CloudFolderBrowserDialog(QDialog):
 
         if remotes:
             self._remote_combo.setCurrentIndex(target_index)
+            self._remote_combo.blockSignals(False)
             self._refresh_folders()
         else:
+            self._remote_combo.blockSignals(False)
             self._folder_list.clear()
             item = QListWidgetItem(tr("ui.endpoint.no_remotes"))
             item.setFlags(Qt.ItemFlag.NoItemFlags)
@@ -204,27 +219,57 @@ class CloudFolderBrowserDialog(QDialog):
             return
 
         self._folder_list.clear()
-        self._btn_up.setEnabled(bool(self._current_path))
+        self._btn_up.setEnabled(False)
+        self._btn_refresh.setEnabled(False)
+        self._btn_new_folder.setEnabled(False)
+        self._path_edit.setEnabled(False)
+        self._remote_combo.setEnabled(False)
+        ok_btn = self._btn_box.button(QDialogButtonBox.StandardButton.Ok)
+        if ok_btn:
+            ok_btn.setEnabled(False)
+
+        # Show visual loading banner and item
+        msg = tr("ui.cloud_browser.loading")
+        self._lbl_status.setText(f"⏳ {msg}")
+        self._lbl_status.setVisible(True)
+
+        loading_item = QListWidgetItem(get_icon("view-refresh"), msg)
+        loading_item.setFlags(Qt.ItemFlag.NoItemFlags)
+        self._folder_list.addItem(loading_item)
         self._update_selection_label()
+
+        # Set wait cursor and force immediate repaint so user sees feedback instantly
+        QApplication.setOverrideCursor(Qt.CursorShape.WaitCursor)
+        QApplication.processEvents()
 
         try:
             dirs = self._remote_service.list_directories(remote, self._current_path)
+            self._folder_list.clear()
+            if not dirs:
+                empty_item = QListWidgetItem(tr("ui.cloud_browser.empty"))
+                empty_item.setFlags(Qt.ItemFlag.NoItemFlags)
+                self._folder_list.addItem(empty_item)
+            else:
+                for directory in dirs:
+                    item = QListWidgetItem(get_icon("folder"), directory)
+                    item.setData(Qt.ItemDataRole.UserRole, directory)
+                    self._folder_list.addItem(item)
         except RemoteOperationError as exc:
+            self._folder_list.clear()
             err_item = QListWidgetItem(tr("ui.cloud_browser.error", error=str(exc)))
             err_item.setFlags(Qt.ItemFlag.NoItemFlags)
             self._folder_list.addItem(err_item)
-            return
-
-        if not dirs:
-            empty_item = QListWidgetItem(tr("ui.cloud_browser.empty"))
-            empty_item.setFlags(Qt.ItemFlag.NoItemFlags)
-            self._folder_list.addItem(empty_item)
-            return
-
-        for directory in dirs:
-            item = QListWidgetItem(get_icon("folder"), directory)
-            item.setData(Qt.ItemDataRole.UserRole, directory)
-            self._folder_list.addItem(item)
+        finally:
+            while QApplication.overrideCursor() is not None:
+                QApplication.restoreOverrideCursor()
+            self._lbl_status.setVisible(False)
+            self._btn_up.setEnabled(bool(self._current_path))
+            self._btn_refresh.setEnabled(True)
+            self._btn_new_folder.setEnabled(True)
+            self._path_edit.setEnabled(True)
+            self._remote_combo.setEnabled(True)
+            if ok_btn:
+                ok_btn.setEnabled(True)
 
     def selected_remote(self) -> str:
         """Return the selected remote name."""
@@ -234,3 +279,13 @@ class CloudFolderBrowserDialog(QDialog):
     def selected_path(self) -> str:
         """Return the selected path inside the remote."""
         return self._selected_path
+
+    def closeEvent(self, event: QCloseEvent) -> None:
+        while QApplication.overrideCursor() is not None:
+            QApplication.restoreOverrideCursor()
+        super().closeEvent(event)
+
+    def reject(self) -> None:
+        while QApplication.overrideCursor() is not None:
+            QApplication.restoreOverrideCursor()
+        super().reject()
