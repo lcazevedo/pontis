@@ -230,6 +230,86 @@ _CATALOG: dict[str, dict[str, str]] = {
         "ui.cloud_browser.error": "Could not list directories: {error}",
         "ui.cloud_browser.new_folder_title": "Create Folder",
         "ui.cloud_browser.new_folder_prompt": "Folder name:",
+        # GUI: Advanced Options
+        "ui.actions.advanced_options": "Advanced Options...",
+        "ui.actions.advanced_options.tooltip": (
+            "Configure filters, limits, and advanced rclone flags"
+        ),
+        "ui.wizard.btn_advanced": "Advanced Options...",
+        "ui.statusbar.options_saved": "Advanced options saved for '{name}'.",
+        "ui.advanced.title": "Advanced Options — {name}",
+        "ui.advanced.title_generic": "Advanced Options",
+        "ui.advanced.header_endpoints": "{side_a} {direction} {side_b}",
+        "ui.advanced.tab_filters": "Filters",
+        "ui.advanced.tab_safety": "Safety & Conflict",
+        "ui.advanced.tab_performance": "Performance & Network",
+        "ui.advanced.tab_flags": "Custom Flags",
+        "ui.advanced.filters.excludes_group": "Exclude Patterns (--exclude)",
+        "ui.advanced.filters.excludes_desc": (
+            "Files or patterns matching these rules will be ignored during synchronization."
+        ),
+        "ui.advanced.filters.includes_group": "Include Patterns (--include)",
+        "ui.advanced.filters.includes_desc": "Only include files matching these patterns.",
+        "ui.advanced.filters.placeholder": "e.g. *.tmp, sync.sh, **/node_modules/**",
+        "ui.advanced.filters.btn_add": "Add",
+        "ui.advanced.filters.btn_remove": "Remove",
+        "ui.advanced.filters.btn_clear": "Clear All",
+        "ui.advanced.filters.empty_excludes": "No exclude patterns defined.",
+        "ui.advanced.filters.empty_includes": "No include patterns defined (all files included).",
+        "ui.advanced.safety.conflict_group": "Conflict Resolution Policy",
+        "ui.advanced.safety.conflict_policy": "Conflict policy:",
+        "ui.advanced.safety.max_delete_group": "Safety Deletion Threshold (--max-delete)",
+        "ui.advanced.safety.max_delete_label": "Max deletion percentage:",
+        "ui.advanced.safety.max_delete_desc": (
+            "Abort the sync if more than {percent}% of files would be deleted "
+            "(prevents accidental mass deletion)."
+        ),
+        "ui.advanced.safety.check_access": (
+            "Verify access integrity with test file (--check-access)"
+        ),
+        "ui.advanced.safety.check_access_desc": (
+            "Creates and validates temporary RCLONE_TEST files on both sides before running bisync."
+        ),
+        "ui.advanced.performance.bwlimit_group": "Bandwidth Limitation (--bwlimit)",
+        "ui.advanced.performance.bwlimit_label": "Bandwidth limit:",
+        "ui.advanced.performance.bwlimit_placeholder": (
+            "e.g. 10M, 500k, 10M:off (leave empty for unlimited)"
+        ),
+        "ui.advanced.performance.bwlimit_desc": (
+            "Throttle network transfer speed (e.g., '10M' for 10 MByte/s, '500k' for 500 kByte/s)."
+        ),
+        "ui.advanced.performance.bwlimit_invalid": (
+            "Invalid bandwidth limit format. Examples: 10M, 500k, 10M:off"
+        ),
+        "ui.advanced.performance.transfers_group": "Parallel Transfers (--transfers)",
+        "ui.advanced.performance.transfers_enable": "Specify custom parallel transfers limit",
+        "ui.advanced.performance.transfers_label": "Parallel transfers:",
+        "ui.advanced.performance.transfers_desc": (
+            "Number of file transfers to run concurrently (rclone default is 4)."
+        ),
+        "ui.advanced.flags.group": "Free-Form Rclone Flags",
+        "ui.advanced.flags.desc": (
+            "Additional rclone command-line arguments (one per line or separated by spaces)."
+        ),
+        "ui.advanced.flags.placeholder": "e.g. --fast-list\n--drive-skip-gdocs",
+        "ui.advanced.flags.forbidden_warning": (
+            "Flag '{flag}' is managed internally by Pontis and cannot be specified manually."
+        ),
+        "ui.advanced.flags.invalid_warning": "Each flag must start with '-' or '--'.",
+        "ui.advanced.preview.title": "Command Preview",
+        "ui.advanced.preview.dry_run": "Simulate dry-run (--dry-run)",
+        "ui.advanced.preview.first_run": "Simulate initial sync (--resync)",
+        "ui.advanced.preview.btn_copy": "Copy Command",
+        "ui.advanced.preview.copied": "Copied!",
+        "ui.advanced.btn_save": "Save Options",
+        "ui.advanced.btn_cancel": "Cancel",
+        "ui.advanced.btn_reset": "Reset to Defaults",
+        "ui.advanced.reset_confirm": (
+            "Are you sure you want to reset all advanced options to defaults?"
+        ),
+        "ui.wizard.summary.advanced_filters": "Filters:",
+        "ui.wizard.summary.advanced_filters_val": "{excludes} exclude(s), {includes} include(s)",
+        "ui.wizard.summary.advanced_max_delete": "Max Delete:",
     },
     "pt_BR": {
         # Profile CLI messages
@@ -458,6 +538,99 @@ _CATALOG: dict[str, dict[str, str]] = {
         "ui.cloud_browser.error": "Não foi possível listar as pastas: {error}",
         "ui.cloud_browser.new_folder_title": "Criar Pasta",
         "ui.cloud_browser.new_folder_prompt": "Nome da pasta:",
+        # GUI: Advanced Options
+        "ui.actions.advanced_options": "Opções Avançadas...",
+        "ui.actions.advanced_options.tooltip": (
+            "Configurar filtros, limites de segurança e flags do rclone"
+        ),
+        "ui.wizard.btn_advanced": "Opções Avançadas...",
+        "ui.statusbar.options_saved": "Opções avançadas salvas para '{name}'.",
+        "ui.advanced.title": "Opções Avançadas — {name}",
+        "ui.advanced.title_generic": "Opções Avançadas",
+        "ui.advanced.header_endpoints": "{side_a} {direction} {side_b}",
+        "ui.advanced.tab_filters": "Filtros",
+        "ui.advanced.tab_safety": "Segurança e Conflitos",
+        "ui.advanced.tab_performance": "Desempenho e Rede",
+        "ui.advanced.tab_flags": "Flags Livres",
+        "ui.advanced.filters.excludes_group": "Padrões de Exclusão (--exclude)",
+        "ui.advanced.filters.excludes_desc": (
+            "Arquivos ou pastas correspondentes a estas regras serão ignorados "
+            "durante a sincronização."
+        ),
+        "ui.advanced.filters.includes_group": "Padrões de Inclusão (--include)",
+        "ui.advanced.filters.includes_desc": (
+            "Incluir apenas arquivos correspondentes a estes padrões."
+        ),
+        "ui.advanced.filters.placeholder": "ex: *.tmp, sync.sh, **/node_modules/**",
+        "ui.advanced.filters.btn_add": "Adicionar",
+        "ui.advanced.filters.btn_remove": "Remover",
+        "ui.advanced.filters.btn_clear": "Limpar Tudo",
+        "ui.advanced.filters.empty_excludes": "Nenhum padrão de exclusão configurado.",
+        "ui.advanced.filters.empty_includes": (
+            "Nenhum padrão de inclusão configurado (todos os arquivos incluídos)."
+        ),
+        "ui.advanced.safety.conflict_group": "Política de Resolução de Conflitos",
+        "ui.advanced.safety.conflict_policy": "Política de conflito:",
+        "ui.advanced.safety.max_delete_group": "Limite de Exclusão de Segurança (--max-delete)",
+        "ui.advanced.safety.max_delete_label": "Percentual máximo de exclusão:",
+        "ui.advanced.safety.max_delete_desc": (
+            "Interrompe a sincronização se mais de {percent}% dos arquivos forem apagados "
+            "(protege contra perda acidental em massa)."
+        ),
+        "ui.advanced.safety.check_access": (
+            "Verificar integridade do acesso com arquivo de teste (--check-access)"
+        ),
+        "ui.advanced.safety.check_access_desc": (
+            "Cria e valida o arquivo temporário RCLONE_TEST em ambos os lados antes do bisync "
+            "para assegurar que os dois lados estão operacionais."
+        ),
+        "ui.advanced.performance.bwlimit_group": "Limite de Largura de Banda (--bwlimit)",
+        "ui.advanced.performance.bwlimit_label": "Limite de banda:",
+        "ui.advanced.performance.bwlimit_placeholder": (
+            "ex: 10M, 500k, 10M:off (deixe vazio para ilimitado)"
+        ),
+        "ui.advanced.performance.bwlimit_desc": (
+            "Controla a taxa de transferência de rede "
+            "(ex: '10M' para 10 MB/s, '500k' para 500 kB/s)."
+        ),
+        "ui.advanced.performance.bwlimit_invalid": (
+            "Formato de limite de banda inválido. Exemplos: 10M, 500k, 10M:off"
+        ),
+        "ui.advanced.performance.transfers_group": "Transferências Paralelas (--transfers)",
+        "ui.advanced.performance.transfers_enable": (
+            "Personalizar limite de transferências paralelas"
+        ),
+        "ui.advanced.performance.transfers_label": "Transferências simultâneas:",
+        "ui.advanced.performance.transfers_desc": (
+            "Quantidade de transferências de arquivos simultâneas (o padrão do rclone é 4)."
+        ),
+        "ui.advanced.flags.group": "Flags Adicionais do Rclone",
+        "ui.advanced.flags.desc": (
+            "Parâmetros de linha de comando adicionais passados diretamente ao rclone "
+            "(um por linha ou separados por espaço)."
+        ),
+        "ui.advanced.flags.placeholder": "ex: --fast-list\n--drive-skip-gdocs",
+        "ui.advanced.flags.forbidden_warning": (
+            "A flag '{flag}' é gerenciada internamente pelo Pontis e não pode ser especificada "
+            "manualmente."
+        ),
+        "ui.advanced.flags.invalid_warning": "Cada flag deve começar com '-' ou '--'.",
+        "ui.advanced.preview.title": "Pré-visualização do Comando",
+        "ui.advanced.preview.dry_run": "Simular (--dry-run)",
+        "ui.advanced.preview.first_run": "Simular primeira execução (--resync)",
+        "ui.advanced.preview.btn_copy": "Copiar Comando",
+        "ui.advanced.preview.copied": "Copiado!",
+        "ui.advanced.btn_save": "Salvar Opções",
+        "ui.advanced.btn_cancel": "Cancelar",
+        "ui.advanced.btn_reset": "Restaurar Padrões",
+        "ui.advanced.reset_confirm": (
+            "Tem certeza que deseja restaurar todas as opções avançadas para os padrões?"
+        ),
+        "ui.wizard.summary.advanced_filters": "Filtros:",
+        "ui.wizard.summary.advanced_filters_val": (
+            "{excludes} exclusão(ões), {includes} inclusão(ões)"
+        ),
+        "ui.wizard.summary.advanced_max_delete": "Limite exclusão:",
     },
 }
 

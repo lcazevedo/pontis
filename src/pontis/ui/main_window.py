@@ -27,6 +27,7 @@ from pontis.infra.paths import config_dir
 from pontis.infra.rclone import locate_rclone
 from pontis.services.profile_service import ProfileService, ProfileSummary
 from pontis.services.remote_service import RemoteService
+from pontis.ui.advanced_options_dialog import AdvancedOptionsDialog
 from pontis.ui.icons import get_icon
 from pontis.ui.theme import ThemeMode, apply_theme
 from pontis.ui.widgets.empty_state import EmptyStateWidget
@@ -50,19 +51,21 @@ class MainWindow(QMainWindow):
     ) -> None:
         super().__init__(parent)
         self._service = service if service is not None else ProfileService(db_path=db_path)
+        self._rclone_config = rclone_config or (config_dir() / "rclone.conf")
+        if rclone_binary is not None:
+            self._rclone_binary: Path | str = rclone_binary
+        else:
+            try:
+                self._rclone_binary = locate_rclone().path
+            except Exception:
+                self._rclone_binary = "rclone"
+
         if remote_service is not None:
             self._remote_service = remote_service
         else:
-            config_file = rclone_config or (config_dir() / "rclone.conf")
-            bin_path: Path | str
-            if rclone_binary is not None:
-                bin_path = rclone_binary
-            else:
-                try:
-                    bin_path = locate_rclone().path
-                except Exception:
-                    bin_path = "rclone"
-            self._remote_service = RemoteService(binary=bin_path, config_path=config_file)
+            self._remote_service = RemoteService(
+                binary=self._rclone_binary, config_path=self._rclone_config
+            )
 
         self._summaries: list[ProfileSummary] = []
         self._current_theme: ThemeMode = ThemeMode.SYSTEM
@@ -95,6 +98,14 @@ class MainWindow(QMainWindow):
         self._action_edit.setEnabled(False)
         self._action_edit.triggered.connect(self._on_edit_profile)
 
+        self._action_advanced = QAction(
+            get_icon("preferences-other"), tr("ui.actions.advanced_options"), self
+        )
+        self._action_advanced.setToolTip(tr("ui.actions.advanced_options.tooltip"))
+        self._action_advanced.setShortcut(QKeySequence("Ctrl+Shift+O"))
+        self._action_advanced.setEnabled(False)
+        self._action_advanced.triggered.connect(self._on_advanced_options)
+
         self._action_delete = QAction(get_icon("edit-delete"), tr("ui.actions.delete"), self)
         self._action_delete.setToolTip(tr("ui.actions.delete.tooltip"))
         self._action_delete.setShortcut(QKeySequence(QKeySequence.StandardKey.Delete))
@@ -119,6 +130,7 @@ class MainWindow(QMainWindow):
 
         toolbar.addAction(self._action_new)
         toolbar.addAction(self._action_edit)
+        toolbar.addAction(self._action_advanced)
         toolbar.addAction(self._action_delete)
         toolbar.addAction(self._action_refresh)
         toolbar.addSeparator()
@@ -173,6 +185,7 @@ class MainWindow(QMainWindow):
         profile_menu = menubar.addMenu(tr("ui.menu.profile"))
         profile_menu.addAction(self._action_new)
         profile_menu.addAction(self._action_edit)
+        profile_menu.addAction(self._action_advanced)
         profile_menu.addAction(self._action_delete)
         profile_menu.addAction(self._action_refresh)
 
@@ -319,17 +332,37 @@ class MainWindow(QMainWindow):
         selected = self._selected_summary()
         self._action_delete.setEnabled(selected is not None)
         self._action_edit.setEnabled(selected is not None)
+        self._action_advanced.setEnabled(selected is not None)
 
     def _on_table_context_menu(self, pos: QPoint) -> None:
         """Show context menu on right-click."""
         menu = QMenu(self)
         if self._selected_summary() is not None:
             menu.addAction(self._action_edit)
+            menu.addAction(self._action_advanced)
             menu.addAction(self._action_delete)
             menu.addSeparator()
         menu.addAction(self._action_new)
         menu.addAction(self._action_refresh)
         menu.exec(self._table.viewport().mapToGlobal(pos))
+
+    def _on_advanced_options(self) -> None:
+        """Open the advanced options dialog for the selected sync profile."""
+        summary = self._selected_summary()
+        if summary is None or summary.profile.id is None:
+            return
+        dialog = AdvancedOptionsDialog(
+            profile=summary.profile,
+            parent=self,
+            rclone_binary=self._rclone_binary,
+            rclone_config=self._rclone_config,
+        )
+        if dialog.exec():
+            self._service.update_profile(summary.profile)
+            self.statusBar().showMessage(
+                tr("ui.statusbar.options_saved", name=summary.profile.name), 4000
+            )
+            self.load_profiles()
 
     def _on_new_profile(self) -> None:
         """Open the wizard to create a new sync profile."""

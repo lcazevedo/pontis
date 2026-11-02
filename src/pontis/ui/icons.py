@@ -94,6 +94,21 @@ def _create_fallback_icon(name: str) -> QIcon:
         painter.setPen(pen_plus)
         painter.drawLine(18, 14, 18, 20)
         painter.drawLine(15, 17, 21, 17)
+    elif name in ("preferences-other", "configure", "settings"):
+        pen = QPen(QColor(100, 116, 139), 2.0, Qt.PenStyle.SolidLine, Qt.PenCapStyle.RoundCap)
+        painter.setPen(pen)
+        painter.drawEllipse(7, 7, 10, 10)
+        # Sliders / notches
+        painter.drawLine(12, 3, 12, 6)
+        painter.drawLine(12, 18, 12, 21)
+        painter.drawLine(3, 12, 6, 12)
+        painter.drawLine(18, 12, 21, 12)
+    elif name in ("edit-copy", "copy"):
+        pen = QPen(QColor(71, 85, 105), 1.8, Qt.PenStyle.SolidLine, Qt.PenCapStyle.RoundCap)
+        painter.setPen(pen)
+        painter.drawRect(8, 8, 11, 12)
+        painter.drawLine(5, 16, 5, 5)
+        painter.drawLine(5, 5, 15, 5)
     elif name == "status_cancelled":
         painter.setPen(Qt.PenStyle.NoPen)
         painter.setBrush(QColor(239, 108, 0))

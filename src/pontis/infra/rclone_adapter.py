@@ -91,12 +91,25 @@ def parse_log_line(line: str) -> LogEvent | None:
     )
 
 
+def check_extra_flag(flag: str) -> str | None:
+    """Check a single flag. Returns an error message if invalid, or None if valid."""
+    cleaned = flag.strip()
+    if not cleaned:
+        return None
+    if not cleaned.startswith("-"):
+        return f"Flag must start with '-' or '--': '{cleaned}'"
+    name = cleaned.split("=", 1)[0]
+    if name in FORBIDDEN_EXTRA_FLAGS:
+        return f"Flag '{name}' is managed by Pontis and cannot be added manually."
+    return None
+
+
 def validate_extra_flags(flags: tuple[str, ...]) -> None:
-    """Reject free-form flags that the app manages itself."""
+    """Reject free-form flags that the app manages itself or that have invalid formats."""
     for flag in flags:
-        name = flag.split("=", 1)[0]
-        if name in FORBIDDEN_EXTRA_FLAGS:
-            raise ValueError(f"Flag not allowed: {name}")
+        err = check_extra_flag(flag)
+        if err is not None:
+            raise ValueError(err)
 
 
 class RcloneAdapter:
@@ -121,14 +134,15 @@ class RcloneAdapter:
 
     def workdir(self, profile: SyncProfile) -> Path:
         """Bisync state directory of a profile."""
-        if profile.id is None:
-            raise ValueError("Profile must be saved before running.")
-        return self._state_root / str(profile.id)
+        pid = profile.id if profile.id is not None else "<profile-id>"
+        return self._state_root / str(pid)
 
     def needs_resync(self, profile: SyncProfile) -> bool:
         """True when bisync has no saved listings yet (first run)."""
         if profile.options.direction is not SyncDirection.BIDIRECTIONAL:
             return False
+        if profile.id is None:
+            return True
         workdir = self.workdir(profile)
         return not (workdir.is_dir() and any(workdir.glob("*.lst")))
 
@@ -198,6 +212,8 @@ class RcloneAdapter:
         ``KeyboardInterrupt`` the child process is terminated and the
         exception propagates.
         """
+        if profile.id is None:
+            raise ValueError("Profile must be saved before running.")
         command = self.build_command(profile, dry_run=dry_run)
         if profile.options.direction is SyncDirection.BIDIRECTIONAL:
             self.workdir(profile).mkdir(parents=True, exist_ok=True)

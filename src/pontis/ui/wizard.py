@@ -9,8 +9,10 @@ from PySide6.QtWidgets import (
     QButtonGroup,
     QFormLayout,
     QGroupBox,
+    QHBoxLayout,
     QLabel,
     QLineEdit,
+    QPushButton,
     QRadioButton,
     QVBoxLayout,
     QWidget,
@@ -29,6 +31,8 @@ from pontis.domain.models import (
 from pontis.i18n import tr
 from pontis.services.profile_service import ProfileService
 from pontis.services.remote_service import RemoteService
+from pontis.ui.advanced_options_dialog import AdvancedOptionsDialog
+from pontis.ui.icons import get_icon
 from pontis.ui.widgets.endpoint_picker import EndpointPickerWidget
 
 if TYPE_CHECKING:
@@ -319,6 +323,19 @@ class ConflictPolicyPage(QWizardPage):
             return ConflictPolicy.PATH2
         return ConflictPolicy.KEEP_BOTH
 
+    def set_conflict_policy(self, policy: ConflictPolicy) -> None:
+        """Update the selected conflict policy radio button."""
+        if policy == ConflictPolicy.NEWER:
+            self._rb_newer.setChecked(True)
+        elif policy == ConflictPolicy.LARGER:
+            self._rb_larger.setChecked(True)
+        elif policy == ConflictPolicy.PATH1:
+            self._rb_path1.setChecked(True)
+        elif policy == ConflictPolicy.PATH2:
+            self._rb_path2.setChecked(True)
+        else:
+            self._rb_keep_both.setChecked(True)
+
 
 class SummaryPage(QWizardPage):
     """Step 6: Review Summary."""
@@ -351,6 +368,8 @@ class SummaryPage(QWizardPage):
         self._lbl_side_b = QLabel(self)
         self._lbl_conflict = QLabel(self)
         self._lbl_schedule = QLabel(self)
+        self._lbl_filters = QLabel(self)
+        self._lbl_max_delete = QLabel(self)
 
         for lbl in (
             self._lbl_name,
@@ -359,6 +378,8 @@ class SummaryPage(QWizardPage):
             self._lbl_side_b,
             self._lbl_conflict,
             self._lbl_schedule,
+            self._lbl_filters,
+            self._lbl_max_delete,
         ):
             lbl.setStyleSheet("font-weight: bold;")
 
@@ -368,8 +389,20 @@ class SummaryPage(QWizardPage):
         form_layout.addRow(tr("ui.wizard.summary.side_b"), self._lbl_side_b)
         form_layout.addRow(tr("ui.wizard.summary.conflict"), self._lbl_conflict)
         form_layout.addRow(tr("ui.wizard.summary.schedule"), self._lbl_schedule)
+        form_layout.addRow(tr("ui.wizard.summary.advanced_filters"), self._lbl_filters)
+        form_layout.addRow(tr("ui.wizard.summary.advanced_max_delete"), self._lbl_max_delete)
 
         layout.addLayout(form_layout)
+
+        # Advanced options button
+        adv_btn_layout = QHBoxLayout()
+        self._btn_advanced = QPushButton(tr("ui.wizard.btn_advanced"), self)
+        self._btn_advanced.setIcon(get_icon("preferences-other"))
+        self._btn_advanced.clicked.connect(self._on_open_advanced)
+        adv_btn_layout.addWidget(self._btn_advanced)
+        adv_btn_layout.addStretch()
+        layout.addLayout(adv_btn_layout)
+
         layout.addStretch()
 
     def initializePage(self) -> None:
@@ -400,6 +433,57 @@ class SummaryPage(QWizardPage):
         self._lbl_conflict.setText(conflict_labels.get(conflict, str(conflict)))
         self._lbl_schedule.setText(tr("ui.wizard.schedule.manual"))
 
+        wizard = self.wizard()
+        if isinstance(wizard, ProfileWizard):
+            opts = wizard.custom_options
+            self._lbl_filters.setText(
+                tr(
+                    "ui.wizard.summary.advanced_filters_val",
+                    excludes=len(opts.excludes),
+                    includes=len(opts.includes),
+                )
+            )
+            self._lbl_max_delete.setText(f"{opts.max_delete_percent}%")
+
+    def _on_open_advanced(self) -> None:
+        """Open the advanced options dialog and preserve user edits in the wizard."""
+        from pontis.domain.models import Endpoint
+
+        wizard = self.wizard()
+        if not isinstance(wizard, ProfileWizard):
+            return
+
+        name = self._name_page.profile_name()
+        side_a = self._side_a_page.picker.get_endpoint() or Endpoint.local("/tmp")
+        side_b = self._side_b_page.picker.get_endpoint() or Endpoint.local("/tmp")
+        direction = self._direction_page.sync_direction()
+        conflict = self._conflict_page.conflict_policy()
+
+        opts_data = wizard.custom_options.to_dict()
+        opts_data["direction"] = direction.value
+        opts_data["conflict_policy"] = conflict.value
+        temp_opts = SyncOptions.from_dict(opts_data)
+
+        temp_profile = SyncProfile(
+            name=name,
+            side_a=side_a,
+            side_b=side_b,
+            options=temp_opts,
+            id=wizard._profile.id if wizard._profile else None,
+        )
+
+        dialog = AdvancedOptionsDialog(
+            profile=temp_profile,
+            parent=self,
+            rclone_binary=wizard._remote_service.binary,
+            rclone_config=wizard._remote_service.config_path,
+        )
+        if dialog.exec():
+            wizard.custom_options = dialog.get_options()
+            # If conflict was modified in the dialog, reflect it on the conflict page
+            self._conflict_page.set_conflict_policy(wizard.custom_options.conflict_policy)
+            self.initializePage()
+
 
 class ProfileWizard(QWizard):
     """Wizard for creating and editing sync profiles."""
@@ -418,6 +502,7 @@ class ProfileWizard(QWizard):
         self._remote_service = remote_service
         self._profile = profile
         self.saved_profile: SyncProfile | None = None
+        self.custom_options: SyncOptions = profile.options if profile is not None else SyncOptions()
 
         if profile is not None:
             self.setWindowTitle(tr("ui.wizard.title_edit", name=profile.name))
@@ -476,29 +561,25 @@ class ProfileWizard(QWizard):
         assert side_a is not None
         assert side_b is not None
 
+        opts_data = self.custom_options.to_dict()
+        opts_data["direction"] = direction.value
+        opts_data["conflict_policy"] = conflict.value
+        final_options = SyncOptions.from_dict(opts_data)
+
         if self._profile is not None:
             # Edit mode: update existing options and fields
-            opts_data = self._profile.options.to_dict()
-            opts_data["direction"] = direction.value
-            opts_data["conflict_policy"] = conflict.value
-            new_options = SyncOptions.from_dict(opts_data)
-
             self._profile.name = name
             self._profile.side_a = side_a
             self._profile.side_b = side_b
-            self._profile.options = new_options
+            self._profile.options = final_options
             self.saved_profile = self._service.update_profile(self._profile)
         else:
             # Create mode
-            options = SyncOptions(
-                direction=direction,
-                conflict_policy=conflict,
-            )
             new_profile = SyncProfile(
                 name=name,
                 side_a=side_a,
                 side_b=side_b,
-                options=options,
+                options=final_options,
                 schedule=Schedule(kind=ScheduleKind.MANUAL),
             )
             self.saved_profile = self._service.add_profile(new_profile)
