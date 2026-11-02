@@ -191,10 +191,10 @@ class SyncProgressDialog(QDialog):
         btn_layout.addWidget(self._btn_summary)
 
         self._btn_force = QPushButton(
-            get_icon("dialog-warning"), tr("ui.progress.btn_confirm_force"), self
+            get_icon("security-high"), tr("ui.progress.btn_authorize_deletions"), self
         )
         self._btn_force.setVisible(False)
-        self._btn_force.setStyleSheet("font-weight: bold; color: #b45309;")
+        self._btn_force.setStyleSheet("font-weight: bold; color: #0277bd;")
         self._btn_force.clicked.connect(self._on_force_clicked)
         btn_layout.addWidget(self._btn_force)
 
@@ -323,25 +323,48 @@ class SyncProgressDialog(QDialog):
                 else ("too many deletes" in result.message.lower())
             )
             if is_too_many:
-                self._status_label.setText(f"⚠ {tr('ui.progress.status_too_many_deletes')}")
-                self._status_label.setStyleSheet("color: #d84315; font-weight: bold;")
+                count = (
+                    outcome.detected_deletes_count
+                    if outcome is not None and outcome.detected_deletes_count > 0
+                    else max(1, len(outcome.planned_delete_files) if outcome is not None else 1)
+                )
+                limit = self._profile.options.max_delete_files
+                self._status_label.setText(
+                    f"🛡️ {tr('ui.progress.status_safety_pause', count=count)}"
+                )
+                self._status_label.setStyleSheet("color: #0277bd; font-weight: bold;")
+                self._btn_force.setText(f"🛡️ {tr('ui.progress.btn_authorize_deletions')}")
                 self._btn_force.setVisible(True)
+                self._log_edit.appendPlainText(
+                    tr("ui.progress.log_safety_protection_note", count=count, limit=limit)
+                )
+                send_notification(
+                    tr("ui.notify.safety_pause_title"),
+                    tr("ui.notify.safety_pause_msg", name=self._profile.name, count=count),
+                    is_error=False,
+                )
             else:
                 self._status_label.setText(f"✗ {tr('ui.progress.status_error')}")
                 self._status_label.setStyleSheet("color: #c62828; font-weight: bold;")
-            send_notification(
-                tr("ui.notify.error_title"),
-                tr("ui.notify.error_msg", name=self._profile.name),
-                is_error=True,
-            )
+                send_notification(
+                    tr("ui.notify.error_title"),
+                    tr("ui.notify.error_msg", name=self._profile.name),
+                    is_error=True,
+                )
 
         self.run_finished.emit(result, outcome)
 
     def _on_force_clicked(self) -> None:
+        count = (
+            self._outcome.detected_deletes_count
+            if self._outcome is not None and self._outcome.detected_deletes_count > 0
+            else max(1, len(self._outcome.planned_delete_files) if self._outcome else 1)
+        )
+        limit = self._profile.options.max_delete_files
         reply = QMessageBox.question(
             self,
-            tr("ui.progress.btn_confirm_force"),
-            tr("ui.progress.force_confirm_prompt"),
+            tr("ui.progress.safety_confirm_title"),
+            tr("ui.progress.safety_confirm_prompt", count=count, limit=limit),
             QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No,
             QMessageBox.StandardButton.No,
         )

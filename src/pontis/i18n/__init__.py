@@ -259,10 +259,12 @@ _CATALOG: dict[str, dict[str, str]] = {
         "ui.advanced.safety.conflict_group": "Conflict Resolution Policy",
         "ui.advanced.safety.conflict_policy": "Conflict policy:",
         "ui.advanced.safety.max_delete_group": "Safety Deletion Threshold (--max-delete)",
-        "ui.advanced.safety.max_delete_label": "Max deletion percentage:",
+        "ui.advanced.safety.max_delete_label": "Safety deletion limit (number of files):",
+        "ui.advanced.safety.files_suffix": "files",
         "ui.advanced.safety.max_delete_desc": (
-            "Abort the sync if more than {percent}% of files would be deleted "
-            "(prevents accidental mass deletion)."
+            "Preventively pauses sync if more than {count} files would be deleted at once, "
+            "protecting against accidental mass data loss. Normal file renames and minor deletions "
+            "proceed without interruption."
         ),
         "ui.advanced.safety.check_access": (
             "Verify access integrity with test file (--check-access)"
@@ -352,14 +354,31 @@ _CATALOG: dict[str, dict[str, str]] = {
         ),
         "ui.progress.cancelling": "Cancelling...",
         "ui.progress.status_too_many_deletes": (
-            "Safety abort: too many deletions detected (max-delete limit exceeded)"
+            "Safety Protection: Deletions awaiting authorization"
+        ),
+        "ui.progress.status_safety_pause": (
+            "Safety Protection: Deletions awaiting authorization ({count} files)"
         ),
         "ui.progress.btn_confirm_force": "Confirm Deletions & Run with --force",
+        "ui.progress.btn_authorize_deletions": "Review & Authorize Deletions",
         "ui.progress.force_confirm_prompt": (
             "The safety deletion threshold was exceeded (common when renaming files or deleting "
             "items in folders with few files).\n\n"
             "Are you sure these deletions are intended and want to proceed with --force?"
         ),
+        "ui.progress.safety_confirm_title": "Accidental Deletion Protection",
+        "ui.progress.safety_confirm_prompt": (
+            "Synchronization was paused preventively because it detected the deletion of {count} "
+            "files (configured limit: {limit} files).\n\n"
+            "If you intentionally deleted or renamed these files, confirm below to proceed with "
+            "the synchronization.\n\n"
+            "Do you want to authorize these deletions now?"
+        ),
+        "ui.progress.log_safety_protection_note": (
+            "🛡️ Safety Protection: {count} deletions detected (limit: {limit}). "
+            "Paused pending user authorization."
+        ),
+        "ui.wizard.summary.max_delete_files_val": "up to {count} files",
         # GUI: Dry Run Summary
         "ui.dry_run.title": "Simulation Summary — {name}",
         "ui.dry_run.subtitle": "No files have been modified. Review the planned changes below.",
@@ -382,6 +401,8 @@ _CATALOG: dict[str, dict[str, str]] = {
         "ui.notify.dry_success_msg": "{name}: {count} file(s) would be modified.",
         "ui.notify.error_title": "Pontis — Synchronization Failed",
         "ui.notify.error_msg": "{name}: an error occurred during synchronization.",
+        "ui.notify.safety_pause_title": "Pontis — Action Required",
+        "ui.notify.safety_pause_msg": "{name}: paused for security ({count} files to delete).",
         # GUI: Alerts
         "ui.alert.already_running": "Profile '{name}' is already currently running.",
         "ui.alert.endpoint_missing": (
@@ -650,10 +671,12 @@ _CATALOG: dict[str, dict[str, str]] = {
         "ui.advanced.safety.conflict_group": "Política de Resolução de Conflitos",
         "ui.advanced.safety.conflict_policy": "Política de conflito:",
         "ui.advanced.safety.max_delete_group": "Limite de Exclusão de Segurança (--max-delete)",
-        "ui.advanced.safety.max_delete_label": "Percentual máximo de exclusão:",
+        "ui.advanced.safety.max_delete_label": "Limite de segurança (número de arquivos):",
+        "ui.advanced.safety.files_suffix": "arquivos",
         "ui.advanced.safety.max_delete_desc": (
-            "Interrompe a sincronização se mais de {percent}% dos arquivos forem apagados "
-            "(protege contra perda acidental em massa)."
+            "Pausa preventivamente a sincronização se mais de {count} arquivos forem excluídos "
+            "de uma vez, protegendo contra perda de dados. Renomeações normais e pequenas "
+            "alterações abaixo desse limite ocorrem sem interrupção."
         ),
         "ui.advanced.safety.check_access": (
             "Verificar integridade do acesso com arquivo de teste (--check-access)"
@@ -751,14 +774,31 @@ _CATALOG: dict[str, dict[str, str]] = {
         ),
         "ui.progress.cancelling": "Cancelando...",
         "ui.progress.status_too_many_deletes": (
-            "Bloqueio de segurança: muitas exclusões detectadas (limite max-delete)"
+            "Proteção de Segurança: Exclusões aguardando sua autorização"
+        ),
+        "ui.progress.status_safety_pause": (
+            "Proteção de Segurança: Exclusões aguardando sua autorização ({count} arquivos)"
         ),
         "ui.progress.btn_confirm_force": "Confirmar Exclusão e Executar com --force",
+        "ui.progress.btn_authorize_deletions": "Revisar e Autorizar Exclusões",
         "ui.progress.force_confirm_prompt": (
             "O limite de segurança de exclusões foi ultrapassado (comum ao renomear arquivos ou "
             "apagar itens em pastas com poucos arquivos).\n\n"
             "Tem certeza de que estas alterações são intencionais e deseja continuar com --force?"
         ),
+        "ui.progress.safety_confirm_title": "Proteção contra Exclusão Acidental",
+        "ui.progress.safety_confirm_prompt": (
+            "A sincronização foi pausada preventivamente porque detectou a exclusão de {count} "
+            "arquivos (limite configurado: {limit} arquivos).\n\n"
+            "Se você apagou ou renomeou esses arquivos intencionalmente, confirme abaixo para "
+            "prosseguir com a sincronização.\n\n"
+            "Deseja autorizar essas exclusões agora?"
+        ),
+        "ui.progress.log_safety_protection_note": (
+            "🛡️ Proteção de Segurança: {count} exclusões detectadas (limite: {limit}). "
+            "Exclusões pausadas aguardando autorização."
+        ),
+        "ui.wizard.summary.max_delete_files_val": "até {count} arquivos",
         # GUI: Dry Run Summary
         "ui.dry_run.title": "Resumo da Simulação — {name}",
         "ui.dry_run.subtitle": (
@@ -783,6 +823,8 @@ _CATALOG: dict[str, dict[str, str]] = {
         "ui.notify.dry_success_msg": "{name}: {count} arquivo(s) seriam alterados.",
         "ui.notify.error_title": "Pontis — Falha na Sincronização",
         "ui.notify.error_msg": "{name}: ocorreu um erro durante a sincronização.",
+        "ui.notify.safety_pause_title": "Pontis — Confirmação Necessária",
+        "ui.notify.safety_pause_msg": "{name}: pausado por segurança ({count} arquivos a excluir).",
         # GUI: Alerts
         "ui.alert.already_running": "O perfil '{name}' já está em execução no momento.",
         "ui.alert.endpoint_missing": (

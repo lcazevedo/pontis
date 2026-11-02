@@ -107,7 +107,7 @@ class SyncOptions:
 
     direction: SyncDirection = SyncDirection.BIDIRECTIONAL
     conflict_policy: ConflictPolicy = ConflictPolicy.KEEP_BOTH
-    max_delete_percent: int = 50
+    max_delete_files: int = 25
     check_access: bool = False
     excludes: tuple[str, ...] = ()
     includes: tuple[str, ...] = ()
@@ -115,18 +115,49 @@ class SyncOptions:
     transfers: int | None = None
     extra_flags: tuple[str, ...] = ()
 
-    def __post_init__(self) -> None:
-        if not 0 <= self.max_delete_percent <= 100:
-            raise ValueError("max_delete_percent must be between 0 and 100.")
-        if self.transfers is not None and self.transfers < 1:
+    def __init__(
+        self,
+        direction: SyncDirection = SyncDirection.BIDIRECTIONAL,
+        conflict_policy: ConflictPolicy = ConflictPolicy.KEEP_BOTH,
+        max_delete_files: int = 25,
+        check_access: bool = False,
+        excludes: tuple[str, ...] = (),
+        includes: tuple[str, ...] = (),
+        bandwidth_limit: str | None = None,
+        transfers: int | None = None,
+        extra_flags: tuple[str, ...] = (),
+        max_delete_percent: int | None = None,
+    ) -> None:
+        effective_max_delete = (
+            max_delete_percent if max_delete_percent is not None else max_delete_files
+        )
+        if effective_max_delete < 0:
+            raise ValueError("max_delete_files must be non-negative.")
+        if transfers is not None and transfers < 1:
             raise ValueError("transfers must be at least 1.")
+
+        object.__setattr__(self, "direction", direction)
+        object.__setattr__(self, "conflict_policy", conflict_policy)
+        object.__setattr__(self, "max_delete_files", effective_max_delete)
+        object.__setattr__(self, "check_access", check_access)
+        object.__setattr__(self, "excludes", tuple(excludes))
+        object.__setattr__(self, "includes", tuple(includes))
+        object.__setattr__(self, "bandwidth_limit", bandwidth_limit)
+        object.__setattr__(self, "transfers", transfers)
+        object.__setattr__(self, "extra_flags", tuple(extra_flags))
+
+    @property
+    def max_delete_percent(self) -> int:
+        """Backwards compatibility alias for max_delete_files."""
+        return self.max_delete_files
 
     def to_dict(self) -> dict[str, Any]:
         """Serialize to a JSON-friendly dict."""
         return {
             "direction": self.direction.value,
             "conflict_policy": self.conflict_policy.value,
-            "max_delete_percent": self.max_delete_percent,
+            "max_delete_files": self.max_delete_files,
+            "max_delete_percent": self.max_delete_files,
             "check_access": self.check_access,
             "excludes": list(self.excludes),
             "includes": list(self.includes),
@@ -139,10 +170,13 @@ class SyncOptions:
     def from_dict(cls, data: dict[str, Any]) -> SyncOptions:
         """Deserialize; missing keys fall back to defaults."""
         defaults = cls()
+        max_del = data.get(
+            "max_delete_files", data.get("max_delete_percent", defaults.max_delete_files)
+        )
         return cls(
             direction=SyncDirection(data.get("direction", defaults.direction)),
             conflict_policy=ConflictPolicy(data.get("conflict_policy", defaults.conflict_policy)),
-            max_delete_percent=data.get("max_delete_percent", defaults.max_delete_percent),
+            max_delete_files=int(max_del),
             check_access=data.get("check_access", defaults.check_access),
             excludes=tuple(data.get("excludes", ())),
             includes=tuple(data.get("includes", ())),

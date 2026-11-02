@@ -74,6 +74,7 @@ class AdapterOutcome:
     speed: float = 0.0
     eta: int | None = None
     is_too_many_deletes: bool = False
+    detected_deletes_count: int = 0
 
 
 EventCallback = Callable[[LogEvent], None]
@@ -194,7 +195,7 @@ class RcloneAdapter:
                     "--conflict-resolve",
                     _CONFLICT_ARGS[opts.conflict_policy],
                     "--max-delete",
-                    str(opts.max_delete_percent),
+                    str(opts.max_delete_files),
                 ]
             if opts.check_access:
                 cmd.append("--check-access")
@@ -303,11 +304,44 @@ class RcloneAdapter:
             if event.obj and event.obj not in outcome.deleted_files:
                 outcome.deleted_files.append(event.obj)
 
+        # Detect files reported as deleted in bisync diff listings
+        m_del_file = re.search(r"File was deleted\s+-\s+(.+)", msg)
+        if m_del_file:
+            del_name = m_del_file.group(1).strip()
+            if del_name and del_name not in outcome.planned_delete_files:
+                outcome.planned_delete_files.append(del_name)
+            outcome.detected_deletes_count = max(
+                outcome.detected_deletes_count, len(outcome.planned_delete_files)
+            )
+
+        # Detect summary line: e.g. "Path2: 2 changes: 1 new, 0 modified, 1 deleted"
+        m_changes = re.search(r"(\d+)\s+deleted", msg)
+        if m_changes:
+            outcome.detected_deletes_count = max(
+                outcome.detected_deletes_count, int(m_changes.group(1))
+            )
+
+        # Detect safety abort with numbers: "too many deletes (>50%, 1 of 1)"
+        m_abort = re.search(r"too many deletes \([^,]+,\s*(\d+)\s+of\s+(\d+)\)", msg)
+        if m_abort:
+            outcome.detected_deletes_count = max(
+                outcome.detected_deletes_count, int(m_abort.group(1))
+            )
+            outcome.is_too_many_deletes = True
+
+        msg_lower = msg.lower()
+        if (
+            "too many deletes" in msg_lower
+            or "safety abort" in msg_lower
+            or "max-delete" in msg_lower
+        ):
+            outcome.is_too_many_deletes = True
+            if outcome.detected_deletes_count == 0:
+                outcome.detected_deletes_count = max(1, len(outcome.planned_delete_files))
+
         if event.level in ("error", "critical") and event.message:
             outcome.error_messages.append(event.message)
             if "Must run --resync" in event.message:
                 outcome.needs_resync = True
-            if "too many deletes" in event.message.lower() or "max-delete" in event.message.lower():
+            if "too many deletes" in msg_lower or "max-delete" in msg_lower:
                 outcome.is_too_many_deletes = True
-        elif "too many deletes" in event.message.lower():
-            outcome.is_too_many_deletes = True

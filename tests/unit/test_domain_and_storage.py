@@ -57,7 +57,7 @@ def test_endpoint_validation_and_rclone_string() -> None:
 
 def test_options_validation_and_roundtrip() -> None:
     with pytest.raises(ValueError):
-        SyncOptions(max_delete_percent=101)
+        SyncOptions(max_delete_files=-1)
     with pytest.raises(ValueError):
         SyncOptions(transfers=0)
     opts = make_profile().options

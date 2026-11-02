@@ -423,7 +423,11 @@ def test_sync_progress_dialog_too_many_deletes_shows_force_button(
 
     assert not dialog._btn_force.isHidden()
     status_text = dialog._status_label.text()
-    assert "Bloqueio de segurança" in status_text or "Safety abort" in status_text
+    assert (
+        "Proteção de Segurança" in status_text
+        or "Safety Protection" in status_text
+        or "🛡️" in status_text
+    )
 
     # User clicks force button
     monkeypatch.setattr(
@@ -448,3 +452,69 @@ def test_rclone_adapter_build_command_with_force(tmp_path: Path) -> None:
 
     assert "--force" not in cmd_normal
     assert "--force" in cmd_forced
+
+
+def test_run_service_auto_forces_when_deletes_within_safety_limit(tmp_path: Path) -> None:
+    profile = _make_profile(tmp_path)
+    profile.options = SyncOptions(max_delete_files=25)
+    mock_adapter = MagicMock(spec=RcloneAdapter)
+    mock_adapter.needs_resync.return_value = False
+
+    # First run aborts with 1 delete (e.g. rename)
+    abort_outcome = AdapterOutcome(
+        returncode=1,
+        command=["rclone"],
+        is_too_many_deletes=True,
+        detected_deletes_count=1,
+        error_messages=["Safety abort: too many deletes (>50%, 1 of 1)"],
+    )
+    # Second run with force succeeds
+    success_outcome = AdapterOutcome(
+        returncode=0,
+        command=["rclone", "--force"],
+        transfers=1,
+        deletes=1,
+    )
+    mock_adapter.run.side_effect = [abort_outcome, success_outcome]
+
+    conn = connect(tmp_path / "t.db")
+    profile = ProfileRepository(conn).add(profile)
+    run_repo = RunRepository(conn)
+    service = RunService(mock_adapter, run_repo, tmp_path / "locks")
+
+    result = service.run(profile, dry_run=False)
+
+    assert result.status == RunStatus.SUCCESS
+    assert mock_adapter.run.call_count == 2
+    # Second call had force=True
+    assert mock_adapter.run.call_args_list[1].kwargs["force"] is True
+
+
+def test_run_service_stops_when_deletes_exceed_safety_limit(tmp_path: Path) -> None:
+    profile = _make_profile(tmp_path)
+    profile.options = SyncOptions(max_delete_files=25)
+    mock_adapter = MagicMock(spec=RcloneAdapter)
+    mock_adapter.needs_resync.return_value = False
+
+    # Aborts with 30 deletes (> safety limit of 25)
+    abort_outcome = AdapterOutcome(
+        returncode=1,
+        command=["rclone"],
+        is_too_many_deletes=True,
+        detected_deletes_count=30,
+        error_messages=["Safety abort: too many deletes (>50%, 30 of 60)"],
+    )
+    mock_adapter.run.return_value = abort_outcome
+
+    conn = connect(tmp_path / "t.db")
+    profile = ProfileRepository(conn).add(profile)
+    run_repo = RunRepository(conn)
+    service = RunService(mock_adapter, run_repo, tmp_path / "locks")
+
+    result = service.run(profile, dry_run=False)
+
+    assert result.status == RunStatus.ERROR
+    # Should NOT have auto-executed with force
+    assert mock_adapter.run.call_count == 1
+    assert service.last_outcome is not None
+    assert service.last_outcome.is_too_many_deletes is True

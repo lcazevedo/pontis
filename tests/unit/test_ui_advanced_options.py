@@ -241,7 +241,7 @@ def test_copy_button_and_reset(
     )
     dialog._btn_reset.click()
 
-    assert dialog._spin_max_delete.value() == 50
+    assert dialog._spin_max_delete.value() == 25
     assert not dialog._chk_check_access.isChecked()
 
 

@@ -443,7 +443,9 @@ class SummaryPage(QWizardPage):
                     includes=len(opts.includes),
                 )
             )
-            self._lbl_max_delete.setText(f"{opts.max_delete_percent}%")
+            self._lbl_max_delete.setText(
+                tr("ui.wizard.summary.max_delete_files_val", count=opts.max_delete_files)
+            )
 
     def _on_open_advanced(self) -> None:
         """Open the advanced options dialog and preserve user edits in the wizard."""

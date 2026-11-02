@@ -247,19 +247,18 @@ class AdvancedOptionsDialog(QDialog):
         conf_layout.addRow(tr("ui.advanced.safety.conflict_policy"), self._combo_conflict)
         layout.addWidget(conflict_group)
 
-        # Max Delete Percent
+        # Max Delete Files
         max_del_group = QGroupBox(tr("ui.advanced.safety.max_delete_group"), tab)
         max_del_layout = QVBoxLayout(max_del_group)
 
         slider_row = QHBoxLayout()
         self._slider_max_delete = QSlider(Qt.Orientation.Horizontal, max_del_group)
-        self._slider_max_delete.setRange(0, 100)
+        self._slider_max_delete.setRange(1, 100)
         self._spin_max_delete = QSpinBox(max_del_group)
-        self._spin_max_delete.setRange(0, 100)
-        self._spin_max_delete.setSuffix("%")
+        self._spin_max_delete.setRange(1, 1000)
+        self._spin_max_delete.setSuffix(f" {tr('ui.advanced.safety.files_suffix')}")
 
         self._slider_max_delete.valueChanged.connect(self._spin_max_delete.setValue)
-        self._spin_max_delete.valueChanged.connect(self._slider_max_delete.setValue)
         self._spin_max_delete.valueChanged.connect(self._on_max_delete_changed)
 
         slider_row.addWidget(self._slider_max_delete, 1)
@@ -446,9 +445,9 @@ class AdvancedOptionsDialog(QDialog):
                 break
 
         # Max delete
-        self._slider_max_delete.setValue(opts.max_delete_percent)
-        self._spin_max_delete.setValue(opts.max_delete_percent)
-        self._update_max_delete_label(opts.max_delete_percent)
+        self._slider_max_delete.setValue(min(opts.max_delete_files, 100))
+        self._spin_max_delete.setValue(opts.max_delete_files)
+        self._update_max_delete_label(opts.max_delete_files)
 
         # Check access
         self._chk_check_access.setChecked(opts.check_access)
@@ -525,11 +524,15 @@ class AdvancedOptionsDialog(QDialog):
         self._validate_and_refresh()
 
     def _on_max_delete_changed(self, value: int) -> None:
+        if self._slider_max_delete.value() != min(value, 100):
+            self._slider_max_delete.blockSignals(True)
+            self._slider_max_delete.setValue(min(value, 100))
+            self._slider_max_delete.blockSignals(False)
         self._update_max_delete_label(value)
         self._validate_and_refresh()
 
-    def _update_max_delete_label(self, percent: int) -> None:
-        self._lbl_max_delete_desc.setText(tr("ui.advanced.safety.max_delete_desc", percent=percent))
+    def _update_max_delete_label(self, count: int) -> None:
+        self._lbl_max_delete_desc.setText(tr("ui.advanced.safety.max_delete_desc", count=count))
 
     def _on_check_access_toggled(self) -> None:
         self._validate_and_refresh()
@@ -643,7 +646,7 @@ class AdvancedOptionsDialog(QDialog):
         current_options = SyncOptions(
             direction=self._profile.options.direction,
             conflict_policy=conflict_val,
-            max_delete_percent=self._spin_max_delete.value(),
+            max_delete_files=self._spin_max_delete.value(),
             check_access=self._chk_check_access.isChecked(),
             excludes=tuple(self._excludes),
             includes=tuple(self._includes),
@@ -703,7 +706,7 @@ class AdvancedOptionsDialog(QDialog):
         self._result_options = SyncOptions(
             direction=self._profile.options.direction,
             conflict_policy=conflict_val,
-            max_delete_percent=self._spin_max_delete.value(),
+            max_delete_files=self._spin_max_delete.value(),
             check_access=self._chk_check_access.isChecked(),
             excludes=tuple(self._excludes),
             includes=tuple(self._includes),

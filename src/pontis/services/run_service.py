@@ -92,6 +92,16 @@ class RunService:
                 outcome = self._adapter.run(
                     profile, dry_run=dry_run, force=force, on_event=on_event
                 )
+                if (
+                    outcome.is_too_many_deletes
+                    and not force
+                    and outcome.detected_deletes_count <= profile.options.max_delete_files
+                ):
+                    # Transparently re-run with force when within safety tolerance
+                    # (e.g. rename or minor deletions in small folders).
+                    outcome = self._adapter.run(
+                        profile, dry_run=dry_run, force=True, on_event=on_event
+                    )
                 self.last_outcome = outcome
                 if on_outcome is not None:
                     on_outcome(outcome)

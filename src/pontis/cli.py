@@ -91,7 +91,7 @@ def build_parser() -> argparse.ArgumentParser:
     add.add_argument("--conflict", choices=[c.value for c in ConflictPolicy], default="keep_both")
     add.add_argument("--exclude", action="append", default=[], metavar="PATTERN")
     add.add_argument("--include", action="append", default=[], metavar="PATTERN")
-    add.add_argument("--max-delete", type=int, default=50, metavar="PERCENT")
+    add.add_argument("--max-delete", type=int, default=25, metavar="COUNT")
     add.add_argument("--check-access", action="store_true")
     add.add_argument("--bwlimit", metavar="RATE")
     add.add_argument("--transfers", type=int)
@@ -197,7 +197,7 @@ def _cmd_profile(args: argparse.Namespace, db_path: Path) -> int:
                 options = SyncOptions(
                     direction=SyncDirection(args.direction),
                     conflict_policy=ConflictPolicy(args.conflict),
-                    max_delete_percent=args.max_delete,
+                    max_delete_files=args.max_delete,
                     check_access=args.check_access,
                     excludes=tuple(args.exclude),
                     includes=tuple(args.include),
