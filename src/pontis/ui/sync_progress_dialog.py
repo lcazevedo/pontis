@@ -54,6 +54,8 @@ class SyncProgressDialog(QDialog):
     run_finished = Signal(object, object)  # (RunResult, AdapterOutcome | None)
     apply_real_sync_requested = Signal()
     force_sync_requested = Signal(bool)
+    resync_requested = Signal()
+    resolve_conflicts_requested = Signal()
 
     def __init__(
         self,
@@ -62,6 +64,7 @@ class SyncProgressDialog(QDialog):
         *,
         dry_run: bool = False,
         force: bool = False,
+        resync: bool = False,
         parent: QWidget | None = None,
     ) -> None:
         super().__init__(parent)
@@ -69,6 +72,7 @@ class SyncProgressDialog(QDialog):
         self._run_service = run_service
         self._dry_run = dry_run
         self._force = force
+        self._resync = resync
         self._is_active = True
         self._result: RunResult | None = None
         self._outcome: AdapterOutcome | None = None
@@ -198,6 +202,20 @@ class SyncProgressDialog(QDialog):
         self._btn_force.clicked.connect(self._on_force_clicked)
         btn_layout.addWidget(self._btn_force)
 
+        self._btn_resync = QPushButton(get_icon("view-refresh"), tr("ui.progress.btn_resync"), self)
+        self._btn_resync.setVisible(False)
+        self._btn_resync.setStyleSheet("font-weight: bold; color: #e65100;")
+        self._btn_resync.clicked.connect(self._on_resync_clicked)
+        btn_layout.addWidget(self._btn_resync)
+
+        self._btn_conflicts = QPushButton(
+            get_icon("emblem-important"), tr("ui.progress.btn_resolve_conflicts"), self
+        )
+        self._btn_conflicts.setVisible(False)
+        self._btn_conflicts.setStyleSheet("font-weight: bold; color: #ef6c00;")
+        self._btn_conflicts.clicked.connect(self._on_conflicts_clicked)
+        btn_layout.addWidget(self._btn_conflicts)
+
         btn_layout.addStretch()
 
         self._btn_cancel = QPushButton(get_icon("process-stop"), tr("ui.progress.btn_cancel"), self)
@@ -217,6 +235,7 @@ class SyncProgressDialog(QDialog):
             self._run_service,
             dry_run=self._dry_run,
             force=self._force,
+            resync=self._resync,
             parent=self,
         )
         self._worker.progress_signal.connect(self._on_progress)
@@ -343,6 +362,17 @@ class SyncProgressDialog(QDialog):
                     tr("ui.notify.safety_pause_msg", name=self._profile.name, count=count),
                     is_error=False,
                 )
+            elif (outcome is not None and outcome.needs_resync) or (
+                "resync" in result.message.lower() and "must run" in result.message.lower()
+            ):
+                self._status_label.setText(tr("ui.progress.status_resync_needed"))
+                self._status_label.setStyleSheet("color: #e65100; font-weight: bold;")
+                self._btn_resync.setVisible(True)
+                send_notification(
+                    tr("ui.notify.error_title"),
+                    tr("ui.progress.status_resync_needed"),
+                    is_error=True,
+                )
             else:
                 self._status_label.setText(f"✗ {tr('ui.progress.status_error')}")
                 self._status_label.setStyleSheet("color: #c62828; font-weight: bold;")
@@ -352,7 +382,34 @@ class SyncProgressDialog(QDialog):
                     is_error=True,
                 )
 
+        if outcome is not None and outcome.has_conflicts:
+            count = len(outcome.conflicts_detected)
+            self._btn_conflicts.setText(f"⚠️ {tr('ui.progress.btn_resolve_conflicts')} ({count})")
+            self._btn_conflicts.setVisible(True)
+
         self.run_finished.emit(result, outcome)
+
+    def _on_resync_clicked(self) -> None:
+        """Handle user request to explicitly initiate a bisync --resync."""
+        reply = QMessageBox.question(
+            self,
+            tr("ui.dialog.resync_confirm.title"),
+            tr("ui.dialog.resync_confirm.message"),
+            QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No,
+            QMessageBox.StandardButton.No,
+        )
+        if reply == QMessageBox.StandardButton.Yes:
+            self.resync_requested.emit()
+            self.accept()
+
+    def _on_conflicts_clicked(self) -> None:
+        """Open the conflict resolution dialog."""
+        from pontis.ui.conflict_resolution_dialog import ConflictResolutionDialog
+
+        dialog = ConflictResolutionDialog(self._profile, parent=self)
+        if dialog.exec() and dialog.should_sync_after:
+            self.apply_real_sync_requested.emit()
+            self.accept()
 
     def _on_force_clicked(self) -> None:
         count = (

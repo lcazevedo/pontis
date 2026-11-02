@@ -11,6 +11,7 @@ from pontis.domain.models import RunResult, SyncProfile
 from pontis.infra.database import connect
 from pontis.infra.paths import default_db_path
 from pontis.infra.repositories import ProfileRepository, RunRepository
+from pontis.infra.run_logger import RunLogManager
 
 
 @dataclass(slots=True)
@@ -78,6 +79,39 @@ class ProfileService:
     def delete_profile(self, profile_id: int) -> None:
         """Delete a profile and its associated run records."""
         self._profile_repo.delete(profile_id)
+
+    def list_runs(self, profile_id: int | None = None, limit: int | None = None) -> list[RunResult]:
+        """Return runs for a profile or across all profiles if profile_id is None."""
+        if profile_id is not None:
+            return self._run_repo.list_for_profile(profile_id, limit=limit)
+        return self._run_repo.list_all(limit=limit)
+
+    def delete_run(self, run_id: int) -> bool:
+        """Delete a single execution record and its log file."""
+        RunLogManager().delete_log(run_id)
+        return self._run_repo.delete(run_id)
+
+    def delete_runs_for_profile(self, profile_id: int) -> int:
+        """Delete all execution records and log files for a profile."""
+        runs = self._run_repo.list_for_profile(profile_id)
+        rids = [r.id for r in runs if r.id is not None]
+        RunLogManager().delete_logs_for_runs(rids)
+        return self._run_repo.delete_for_profile(profile_id)
+
+    def clear_all_runs(self) -> int:
+        """Delete all execution records and log files."""
+        runs = self._run_repo.list_all()
+        rids = [r.id for r in runs if r.id is not None]
+        RunLogManager().delete_logs_for_runs(rids)
+        return self._run_repo.clear_all()
+
+    def get_run_log(self, run_id: int, log_dir: Path | None = None) -> str:
+        """Read the execution log text for a specific run ID."""
+        return RunLogManager(log_dir=log_dir).get_run_log(run_id)
+
+    def export_run_log(self, run_id: int, target_path: Path, log_dir: Path | None = None) -> None:
+        """Export the execution log of a run to a destination path."""
+        RunLogManager(log_dir=log_dir).export_log(run_id, target_path)
 
     def close(self) -> None:
         """Close the database connection if this service opened it."""

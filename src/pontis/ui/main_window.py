@@ -33,7 +33,9 @@ from pontis.services.profile_service import ProfileService, ProfileSummary
 from pontis.services.remote_service import RemoteService
 from pontis.services.run_service import RunService
 from pontis.ui.advanced_options_dialog import AdvancedOptionsDialog
+from pontis.ui.conflict_resolution_dialog import ConflictResolutionDialog
 from pontis.ui.dry_run_summary_dialog import DryRunSummaryDialog
+from pontis.ui.history_dialog import HistoryDialog
 from pontis.ui.icons import get_icon
 from pontis.ui.sync_progress_dialog import SyncProgressDialog
 from pontis.ui.theme import ThemeMode, apply_theme
@@ -152,6 +154,20 @@ class MainWindow(QMainWindow):
         self._action_advanced.setEnabled(False)
         self._action_advanced.triggered.connect(self._on_advanced_options)
 
+        self._action_conflicts = QAction(
+            get_icon("emblem-important"), tr("ui.actions.conflicts"), self
+        )
+        self._action_conflicts.setToolTip(tr("ui.actions.conflicts.tooltip"))
+        self._action_conflicts.setEnabled(False)
+        self._action_conflicts.triggered.connect(self._on_conflicts)
+
+        self._action_history = QAction(
+            get_icon("document-open-recent"), tr("ui.actions.history"), self
+        )
+        self._action_history.setToolTip(tr("ui.actions.history.tooltip"))
+        self._action_history.setShortcut(QKeySequence("Ctrl+H"))
+        self._action_history.triggered.connect(self._on_history)
+
         self._action_delete = QAction(get_icon("edit-delete"), tr("ui.actions.delete"), self)
         self._action_delete.setToolTip(tr("ui.actions.delete.tooltip"))
         self._action_delete.setShortcut(QKeySequence(QKeySequence.StandardKey.Delete))
@@ -180,6 +196,8 @@ class MainWindow(QMainWindow):
         toolbar.addAction(self._action_new)
         toolbar.addAction(self._action_edit)
         toolbar.addAction(self._action_advanced)
+        toolbar.addAction(self._action_conflicts)
+        toolbar.addAction(self._action_history)
         toolbar.addAction(self._action_delete)
         toolbar.addAction(self._action_refresh)
         toolbar.addSeparator()
@@ -238,6 +256,8 @@ class MainWindow(QMainWindow):
         profile_menu.addAction(self._action_new)
         profile_menu.addAction(self._action_edit)
         profile_menu.addAction(self._action_advanced)
+        profile_menu.addAction(self._action_conflicts)
+        profile_menu.addAction(self._action_history)
         profile_menu.addAction(self._action_delete)
         profile_menu.addAction(self._action_refresh)
 
@@ -395,6 +415,7 @@ class MainWindow(QMainWindow):
         self._action_delete.setEnabled(has_sel and not is_running)
         self._action_edit.setEnabled(has_sel and not is_running)
         self._action_advanced.setEnabled(has_sel and not is_running)
+        self._action_conflicts.setEnabled(has_sel and not is_running)
 
     def _on_table_context_menu(self, pos: QPoint) -> None:
         """Show context menu on right-click."""
@@ -405,7 +426,12 @@ class MainWindow(QMainWindow):
             menu.addSeparator()
             menu.addAction(self._action_edit)
             menu.addAction(self._action_advanced)
+            menu.addAction(self._action_conflicts)
+            menu.addAction(self._action_history)
             menu.addAction(self._action_delete)
+            menu.addSeparator()
+        else:
+            menu.addAction(self._action_history)
             menu.addSeparator()
         menu.addAction(self._action_new)
         menu.addAction(self._action_refresh)
@@ -462,6 +488,7 @@ class MainWindow(QMainWindow):
         dry_run: bool,
         is_first_run: bool = False,
         force: bool = False,
+        resync: bool = False,
     ) -> None:
         """Launch the sync progress dialog and track execution lifecycle."""
         if profile.id is None:
@@ -472,12 +499,14 @@ class MainWindow(QMainWindow):
 
         apply_real_after_dry_run = False
         apply_real_force = False
+        apply_resync = False
 
         dialog = SyncProgressDialog(
             profile,
             self._run_service,
             dry_run=dry_run,
             force=force,
+            resync=resync,
             parent=self,
         )
 
@@ -493,13 +522,22 @@ class MainWindow(QMainWindow):
                 apply_real_after_dry_run = True
                 apply_real_force = True
 
+        def _on_resync_requested() -> None:
+            nonlocal apply_resync
+            apply_resync = True
+
         dialog.apply_real_sync_requested.connect(_on_apply_requested)
         dialog.force_sync_requested.connect(_on_force_requested)
+        dialog.resync_requested.connect(_on_resync_requested)
         dialog.exec()
 
         self._running_profile_ids.discard(profile.id)
         self.load_profiles()
         self._on_selection_changed()
+
+        if apply_resync:
+            self._execute_profile(profile, dry_run=False, resync=True)
+            return
 
         if apply_real_after_dry_run:
             self._execute_profile(profile, dry_run=False, force=apply_real_force)
@@ -515,6 +553,27 @@ class MainWindow(QMainWindow):
             summary_dialog = DryRunSummaryDialog(profile, dialog.outcome, parent=self)
             if summary_dialog.exec() and summary_dialog.should_apply_sync:
                 self._execute_profile(profile, dry_run=False, force=summary_dialog.apply_with_force)
+
+    def _on_history(self) -> None:
+        """Open execution history and log viewer dialog."""
+        summary = self._selected_summary()
+        initial_id = summary.profile.id if (summary and summary.profile.id) else None
+        dialog = HistoryDialog(self._service, initial_profile_id=initial_id, parent=self)
+        dialog.exec()
+
+    def _on_conflicts(self) -> None:
+        """Open conflict resolution dialog for the selected profile."""
+        summary = self._selected_summary()
+        if summary is None or summary.profile.id is None:
+            return
+        dialog = ConflictResolutionDialog(
+            profile=summary.profile,
+            rclone_binary=self._rclone_binary,
+            rclone_config=self._rclone_config,
+            parent=self,
+        )
+        if dialog.exec() and dialog.should_sync_after:
+            self._execute_profile(summary.profile, dry_run=False)
 
     def _on_advanced_options(self) -> None:
         """Open the advanced options dialog for the selected sync profile."""

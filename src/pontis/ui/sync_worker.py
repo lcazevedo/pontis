@@ -33,6 +33,7 @@ class SyncWorker(QThread):
         *,
         dry_run: bool = False,
         force: bool = False,
+        resync: bool = False,
         parent: QObject | None = None,
     ) -> None:
         super().__init__(parent)
@@ -40,6 +41,7 @@ class SyncWorker(QThread):
         self._run_service = run_service
         self._dry_run = dry_run
         self._force = force
+        self._resync = resync
         self._is_cancelled = False
 
     @property
@@ -82,6 +84,7 @@ class SyncWorker(QThread):
                 dry_run=self._dry_run,
                 require_dry_run_first=False,
                 force=self._force,
+                resync=self._resync,
                 on_event=_on_event,
                 on_outcome=_on_outcome,
             )

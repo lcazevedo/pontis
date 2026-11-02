@@ -75,6 +75,12 @@ class AdapterOutcome:
     eta: int | None = None
     is_too_many_deletes: bool = False
     detected_deletes_count: int = 0
+    conflicts_detected: list[str] = field(default_factory=list)
+
+    @property
+    def has_conflicts(self) -> bool:
+        """True if any conflicts were detected during synchronization."""
+        return len(self.conflicts_detected) > 0
 
 
 EventCallback = Callable[[LogEvent], None]
@@ -225,6 +231,7 @@ class RcloneAdapter:
         *,
         dry_run: bool = False,
         force: bool = False,
+        resync: bool | None = None,
         on_event: EventCallback | None = None,
     ) -> AdapterOutcome:
         """Run rclone for the profile, streaming parsed log events to ``on_event``.
@@ -235,7 +242,7 @@ class RcloneAdapter:
         """
         if profile.id is None:
             raise ValueError("Profile must be saved before running.")
-        command = self.build_command(profile, dry_run=dry_run, force=force)
+        command = self.build_command(profile, dry_run=dry_run, force=force, resync=resync)
         if profile.options.direction is SyncDirection.BIDIRECTIONAL:
             self.workdir(profile).mkdir(parents=True, exist_ok=True)
         outcome = AdapterOutcome(returncode=-1, command=command)
@@ -329,6 +336,22 @@ class RcloneAdapter:
             )
             outcome.is_too_many_deletes = True
 
+        # Detect conflicts reported by bisync
+        m_conflict = re.search(r"New or changed in both paths\s+-\s+(.+)", msg)
+        if m_conflict:
+            cfile = m_conflict.group(1).strip()
+            if cfile and cfile not in outcome.conflicts_detected:
+                outcome.conflicts_detected.append(cfile)
+
+        m_rename = re.search(r"Renaming Path\d+ copy\s+-\s+(.+)", msg)
+        if m_rename:
+            renamed_path = m_rename.group(1).strip()
+            # Extract base name from conflict path (e.g. ".../file.txt.conflict1" -> "file.txt")
+            base_cand = Path(renamed_path).name
+            clean_cand = re.sub(r"\.conflict\d+$", "", base_cand)
+            if clean_cand and clean_cand not in outcome.conflicts_detected:
+                outcome.conflicts_detected.append(clean_cand)
+
         msg_lower = msg.lower()
         if (
             "too many deletes" in msg_lower
@@ -339,9 +362,18 @@ class RcloneAdapter:
             if outcome.detected_deletes_count == 0:
                 outcome.detected_deletes_count = max(1, len(outcome.planned_delete_files))
 
+        if any(
+            p in msg_lower
+            for p in (
+                "must run --resync",
+                "--resync to recover",
+                "run with --resync",
+                "require --resync",
+            )
+        ):
+            outcome.needs_resync = True
+
         if event.level in ("error", "critical") and event.message:
             outcome.error_messages.append(event.message)
-            if "Must run --resync" in event.message:
-                outcome.needs_resync = True
             if "too many deletes" in msg_lower or "max-delete" in msg_lower:
                 outcome.is_too_many_deletes = True

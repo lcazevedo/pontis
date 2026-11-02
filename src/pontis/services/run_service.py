@@ -15,8 +15,9 @@ from pontis.domain.models import (
     utcnow,
 )
 from pontis.infra.locking import ProfileLock
-from pontis.infra.rclone_adapter import AdapterOutcome, EventCallback, RcloneAdapter
+from pontis.infra.rclone_adapter import AdapterOutcome, EventCallback, LogEvent, RcloneAdapter
 from pontis.infra.repositories import RunRepository
+from pontis.infra.run_logger import RunLogManager
 
 
 class RunError(Exception):
@@ -43,15 +44,30 @@ class RunService:
         adapter: RcloneAdapter,
         runs: RunRepository,
         lock_dir: Path,
+        log_manager: RunLogManager | None = None,
     ) -> None:
         self._adapter = adapter
         self._runs = runs
         self._lock_dir = lock_dir
+        self._log_manager = log_manager if log_manager is not None else RunLogManager()
         self.last_outcome: AdapterOutcome | None = None
+
+    @property
+    def log_manager(self) -> RunLogManager:
+        """Return the active log manager."""
+        return self._log_manager
 
     def cancel(self) -> None:
         """Cancel the active rclone process, if any."""
         self._adapter.cancel()
+
+    def get_run_log(self, run_id: int) -> str:
+        """Read the execution log text for a specific run ID."""
+        return self._log_manager.get_run_log(run_id)
+
+    def export_run_log(self, run_id: int, target_path: Path) -> None:
+        """Export the execution log of a run to a destination path."""
+        self._log_manager.export_log(run_id, target_path)
 
     def needs_first_run_dry_run(self, profile: SyncProfile) -> bool:
         """Return True if the profile requires a successful initial dry-run."""
@@ -66,6 +82,7 @@ class RunService:
         dry_run: bool = False,
         require_dry_run_first: bool = True,
         force: bool = False,
+        resync: bool = False,
         on_event: EventCallback | None = None,
         on_outcome: Callable[[AdapterOutcome], None] | None = None,
     ) -> RunResult:
@@ -82,15 +99,39 @@ class RunService:
             if (
                 require_dry_run_first
                 and not dry_run
+                and not resync
                 and self._adapter.needs_resync(profile)
                 and not self._has_successful_dry_run(profile.id)
             ):
                 raise FirstRunDryRunRequiredError(profile.name)
 
             result = self._runs.add(RunResult(profile_id=profile.id, dry_run=dry_run))
+            assert result.id is not None
+            cmd = self._adapter.build_command(
+                profile,
+                dry_run=dry_run,
+                force=force,
+                resync=True if resync else None,
+            )
+            log_writer = self._log_manager.create_writer(
+                result.id,
+                profile.name,
+                dry_run=dry_run,
+                command=cmd,
+            )
+
+            def _log_event_handler(event: LogEvent) -> None:
+                log_writer.write_event(event)
+                if on_event is not None:
+                    on_event(event)
+
             try:
                 outcome = self._adapter.run(
-                    profile, dry_run=dry_run, force=force, on_event=on_event
+                    profile,
+                    dry_run=dry_run,
+                    force=force,
+                    resync=True if resync else None,
+                    on_event=_log_event_handler,
                 )
                 if (
                     outcome.is_too_many_deletes
@@ -100,16 +141,22 @@ class RunService:
                     # Transparently re-run with force when within safety tolerance
                     # (e.g. rename or minor deletions in small folders).
                     outcome = self._adapter.run(
-                        profile, dry_run=dry_run, force=True, on_event=on_event
+                        profile,
+                        dry_run=dry_run,
+                        force=True,
+                        resync=True if resync else None,
+                        on_event=_log_event_handler,
                     )
                 self.last_outcome = outcome
                 if on_outcome is not None:
                     on_outcome(outcome)
             except KeyboardInterrupt:
                 self._finish(result, RunStatus.CANCELLED, "cancelled")
+                log_writer.finish(RunStatus.CANCELLED, 0, 0, 0, "cancelled")
                 raise
             except BaseException as exc:
                 self._finish(result, RunStatus.ERROR, str(exc))
+                log_writer.finish(RunStatus.ERROR, 0, 0, 1, str(exc))
                 raise
 
             result.files_transferred = outcome.planned_copies if dry_run else outcome.transfers
@@ -117,11 +164,24 @@ class RunService:
             result.errors = outcome.errors
 
             if outcome.returncode in (-15, -9, 130, 143):
-                return self._finish(result, RunStatus.CANCELLED, "cancelled")
-            if outcome.returncode == 0:
-                return self._finish(result, RunStatus.SUCCESS, "")
-            message = "\n".join(outcome.error_messages[-5:]) or f"rclone exit {outcome.returncode}"
-            return self._finish(result, RunStatus.ERROR, message)
+                final_res = self._finish(result, RunStatus.CANCELLED, "cancelled")
+            elif outcome.returncode == 0:
+                final_res = self._finish(result, RunStatus.SUCCESS, "")
+            else:
+                message = (
+                    "\n".join(outcome.error_messages[-5:]) or f"rclone exit {outcome.returncode}"
+                )
+                final_res = self._finish(result, RunStatus.ERROR, message)
+
+            log_writer.finish(
+                final_res.status,
+                final_res.files_transferred,
+                final_res.files_deleted,
+                final_res.errors,
+                final_res.message,
+            )
+            self._log_manager.prune_logs()
+            return final_res
 
     def _finish(self, result: RunResult, status: RunStatus, message: str) -> RunResult:
         result.status = status

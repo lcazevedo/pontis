@@ -163,14 +163,32 @@ class RunRepository:
             params = (profile_id, limit)
         return [self._from_row(r) for r in self._conn.execute(sql, params).fetchall()]
 
+    def list_all(self, limit: int | None = None) -> list[RunResult]:
+        """Return all runs across profiles, newest first."""
+        sql = "SELECT * FROM runs ORDER BY started_at DESC, id DESC"
+        params: tuple[int, ...] = ()
+        if limit is not None:
+            sql += " LIMIT ?"
+            params = (limit,)
+        return [self._from_row(r) for r in self._conn.execute(sql, params).fetchall()]
+
     def last_for_profile(self, profile_id: int) -> RunResult | None:
         """Return the most recent run of a profile, or ``None``."""
         runs = self.list_for_profile(profile_id, limit=1)
         return runs[0] if runs else None
 
+    def delete(self, run_id: int) -> bool:
+        """Delete a single run record by ID."""
+        cur = self._conn.execute("DELETE FROM runs WHERE id = ?", (run_id,))
+        return cur.rowcount > 0
+
     def delete_for_profile(self, profile_id: int) -> int:
         """Delete all runs of a profile; return how many were removed."""
         return self._conn.execute("DELETE FROM runs WHERE profile_id = ?", (profile_id,)).rowcount
+
+    def clear_all(self) -> int:
+        """Delete all runs from the database; return how many were removed."""
+        return self._conn.execute("DELETE FROM runs").rowcount
 
     @staticmethod
     def _values(r: RunResult) -> tuple[object, ...]:

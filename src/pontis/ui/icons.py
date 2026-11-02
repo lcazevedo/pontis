@@ -118,7 +118,14 @@ def _create_fallback_icon(name: str) -> QIcon:
         painter.setPen(Qt.PenStyle.NoPen)
         painter.setBrush(QColor(198, 40, 40))
         painter.drawRect(6, 6, 12, 12)
-    elif name in ("dialog-warning", "warning"):
+    elif name in ("document-open-recent", "history", "appointment-new"):
+        # Clock / history icon
+        pen = QPen(QColor(100, 116, 139), 2.0, Qt.PenStyle.SolidLine, Qt.PenCapStyle.RoundCap)
+        painter.setPen(pen)
+        painter.drawEllipse(4, 4, 16, 16)
+        painter.drawLine(12, 8, 12, 12)
+        painter.drawLine(12, 12, 16, 12)
+    elif name in ("emblem-important", "conflict", "dialog-warning"):
         painter.setPen(Qt.PenStyle.NoPen)
         painter.setBrush(QColor(245, 124, 0))
         triangle = QPolygon([QPoint(12, 4), QPoint(21, 20), QPoint(3, 20)])
@@ -126,6 +133,18 @@ def _create_fallback_icon(name: str) -> QIcon:
         painter.setPen(QPen(QColor(255, 255, 255), 2.0))
         painter.drawLine(12, 10, 12, 14)
         painter.drawPoint(12, 17)
+    elif name in ("document-save", "save", "export"):
+        pen = QPen(QColor(30, 136, 229), 2.0, Qt.PenStyle.SolidLine, Qt.PenCapStyle.RoundCap)
+        painter.setPen(pen)
+        painter.drawRect(5, 5, 14, 14)
+        painter.drawLine(8, 5, 8, 9)
+        painter.drawLine(16, 5, 16, 9)
+        painter.drawLine(8, 14, 16, 14)
+    elif name in ("edit-clear", "clear"):
+        pen = QPen(QColor(211, 47, 47), 2.0, Qt.PenStyle.SolidLine, Qt.PenCapStyle.RoundCap)
+        painter.setPen(pen)
+        painter.drawLine(6, 6, 18, 18)
+        painter.drawLine(18, 6, 6, 18)
     elif name in ("dialog-information", "info"):
         painter.setPen(Qt.PenStyle.NoPen)
         painter.setBrush(QColor(25, 118, 210))

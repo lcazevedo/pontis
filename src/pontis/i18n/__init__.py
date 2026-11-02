@@ -89,6 +89,12 @@ _CATALOG: dict[str, dict[str, str]] = {
         "ui.actions.new.tooltip": "Create a new sync profile",
         "ui.actions.edit": "Edit",
         "ui.actions.edit.tooltip": "Edit the selected sync profile",
+        "ui.actions.history": "History",
+        "ui.actions.history.tooltip": "View execution history and logs (Ctrl+H)",
+        "ui.actions.conflicts": "Conflicts",
+        "ui.actions.conflicts.tooltip": "Resolve conflicted files",
+        "ui.actions.resync": "Resync",
+        "ui.actions.resync.tooltip": "Perform a full resync (--resync)",
         "ui.actions.delete": "Delete",
         "ui.actions.delete.tooltip": "Delete the selected sync profile",
         "ui.actions.refresh": "Refresh",
@@ -409,6 +415,80 @@ _CATALOG: dict[str, dict[str, str]] = {
             "Local folder not found: {path}\n"
             "Please check if the folder exists and if any external drive is connected."
         ),
+        # GUI: Progress / Resync / Conflicts
+        "ui.progress.status_resync_needed": (
+            "⚠️ Critical error: rclone requires a resync (--resync)."
+        ),
+        "ui.progress.btn_resync": "Resync (--resync)...",
+        "ui.progress.conflicts_alert": "⚠️ Conflicts detected in {count} file(s).",
+        "ui.progress.btn_resolve_conflicts": "Resolve Conflicts...",
+        "ui.dialog.resync_confirm.title": "Confirm Resync",
+        "ui.dialog.resync_confirm.message": (
+            "rclone bisync reported that the previous sync was aborted or encountered an error, "
+            "requiring a --resync to safely rebuild state listings.\n\n"
+            "For your data safety, Pontis NEVER repeats a resync automatically.\n\n"
+            "During resync, if files differ, the newer version (--resync-mode newer) "
+            "will be preserved.\n\n"
+            "Do you want to perform the resync now?"
+        ),
+        # GUI: Execution History
+        "ui.history.title": "Execution History",
+        "ui.history.filter_all_profiles": "All Profiles",
+        "ui.history.filter_status_all": "All Statuses",
+        "ui.history.filter_status_success": "Success",
+        "ui.history.filter_status_error": "Errors",
+        "ui.history.filter_status_cancelled": "Cancelled",
+        "ui.history.filter_status_dry": "Simulations",
+        "ui.history.btn_clear": "Clear History",
+        "ui.history.clear_confirm_title": "Clear History",
+        "ui.history.clear_confirm_msg": (
+            "Are you sure you want to delete the execution history for the selected view?"
+        ),
+        "ui.history.table.id": "#",
+        "ui.history.table.profile": "Profile",
+        "ui.history.table.started": "Date / Time",
+        "ui.history.table.duration": "Duration",
+        "ui.history.table.mode": "Mode",
+        "ui.history.table.mode_real": "Real",
+        "ui.history.table.mode_dry": "Simulation",
+        "ui.history.table.status": "Status",
+        "ui.history.table.files": "Transf. / Del. / Errors",
+        "ui.history.details.title": "Execution Details",
+        "ui.history.details.none_selected": "Select a run to view its details and full log.",
+        "ui.history.details.empty_log": "No execution log recorded for this run.",
+        "ui.history.btn_export": "Export Log...",
+        "ui.history.btn_copy": "Copy Log",
+        "ui.history.btn_close": "Close",
+        "ui.history.export_dialog_title": "Save Log File",
+        "ui.history.export_success": "Log exported successfully to: {path}",
+        "ui.history.empty_runs": "No execution history recorded yet.",
+        # GUI: Conflict Resolution
+        "ui.conflicts.title": "Conflict Resolution — {name}",
+        "ui.conflicts.subtitle": (
+            "The following files were modified simultaneously on both sides. "
+            "Choose how to resolve each conflict:"
+        ),
+        "ui.conflicts.no_conflicts": "No conflicted files found in this profile.",
+        "ui.conflicts.table.file": "File",
+        "ui.conflicts.table.side_a": "Side A Version",
+        "ui.conflicts.table.side_b": "Side B Version",
+        "ui.conflicts.table.action": "Resolution Action",
+        "ui.conflicts.action.keep_side_a": "Keep Side A",
+        "ui.conflicts.action.keep_side_b": "Keep Side B",
+        "ui.conflicts.action.keep_both": "Keep Both (Renamed)",
+        "ui.conflicts.action.delete_both": "Discard Both",
+        "ui.conflicts.batch_label": "Mark all as:",
+        "ui.conflicts.btn_apply": "Apply Resolutions",
+        "ui.conflicts.btn_refresh": "Refresh",
+        "ui.conflicts.btn_close": "Close",
+        "ui.conflicts.preview.title": "File Preview",
+        "ui.conflicts.preview.side_a": "Side A:",
+        "ui.conflicts.preview.side_b": "Side B:",
+        "ui.conflicts.preview.not_available": "Text preview not available for this file.",
+        "ui.conflicts.applied_msg": (
+            "{count} conflict(s) resolved successfully. Run sync to consolidate."
+        ),
+        "ui.conflicts.btn_sync_now": "Sync Now",
     },
     "pt_BR": {
         # Profile CLI messages
@@ -492,6 +572,12 @@ _CATALOG: dict[str, dict[str, str]] = {
         "ui.actions.new.tooltip": "Criar um novo perfil de sincronização",
         "ui.actions.edit": "Editar",
         "ui.actions.edit.tooltip": "Editar o perfil de sincronização selecionado",
+        "ui.actions.history": "Histórico",
+        "ui.actions.history.tooltip": "Ver histórico e logs de execuções (Ctrl+H)",
+        "ui.actions.conflicts": "Conflitos",
+        "ui.actions.conflicts.tooltip": "Resolver arquivos em conflito",
+        "ui.actions.resync": "Ressincronizar",
+        "ui.actions.resync.tooltip": "Executar ressincronização completa (--resync)",
         "ui.actions.delete": "Excluir",
         "ui.actions.delete.tooltip": "Excluir o perfil de sincronização selecionado",
         "ui.actions.refresh": "Atualizar",
@@ -831,6 +917,85 @@ _CATALOG: dict[str, dict[str, str]] = {
             "Pasta local não encontrada: {path}\n"
             "Por favor, verifique se a pasta existe e se o disco está conectado."
         ),
+        # GUI: Progress / Resync / Conflicts
+        "ui.progress.status_resync_needed": (
+            "⚠️ Erro crítico: o rclone requer ressincronização (--resync)."
+        ),
+        "ui.progress.btn_resync": "Ressincronizar (--resync)...",
+        "ui.progress.conflicts_alert": "⚠️ Conflitos detectados em {count} arquivo(s).",
+        "ui.progress.btn_resolve_conflicts": "Resolver Conflitos...",
+        "ui.dialog.resync_confirm.title": "Confirmar Ressincronização",
+        "ui.dialog.resync_confirm.message": (
+            "O rclone bisync identificou que a sincronização anterior falhou ou foi interrompida "
+            "e requer um --resync para recriar as listas de estado com segurança.\n\n"
+            "Por segurança, o Pontis NUNCA repete uma ressincronização automaticamente.\n\n"
+            "Ao ressincronizar, em caso de divergência a versão mais recente "
+            "(--resync-mode newer) será preservada.\n\n"
+            "Deseja executar a ressincronização agora?"
+        ),
+        # GUI: Execution History
+        "ui.history.title": "Histórico de Execuções",
+        "ui.history.filter_all_profiles": "Todos os Perfis",
+        "ui.history.filter_status_all": "Todos os Status",
+        "ui.history.filter_status_success": "Sucesso",
+        "ui.history.filter_status_error": "Erros",
+        "ui.history.filter_status_cancelled": "Cancelados",
+        "ui.history.filter_status_dry": "Simulações",
+        "ui.history.btn_clear": "Limpar Histórico",
+        "ui.history.clear_confirm_title": "Limpar Histórico",
+        "ui.history.clear_confirm_msg": (
+            "Tem certeza que deseja apagar o histórico de execuções exibido?"
+        ),
+        "ui.history.table.id": "#",
+        "ui.history.table.profile": "Perfil",
+        "ui.history.table.started": "Data / Hora",
+        "ui.history.table.duration": "Duração",
+        "ui.history.table.mode": "Modo",
+        "ui.history.table.mode_real": "Real",
+        "ui.history.table.mode_dry": "Simulação",
+        "ui.history.table.status": "Status",
+        "ui.history.table.files": "Transf. / Excl. / Erros",
+        "ui.history.details.title": "Detalhes da Execução",
+        "ui.history.details.none_selected": (
+            "Selecione uma execução para ver os detalhes e o log completo."
+        ),
+        "ui.history.details.empty_log": "Nenhum log gravado para esta execução.",
+        "ui.history.btn_export": "Exportar Log...",
+        "ui.history.btn_copy": "Copiar Log",
+        "ui.history.btn_close": "Fechar",
+        "ui.history.export_dialog_title": "Salvar Arquivo de Log",
+        "ui.history.export_success": "Log exportado com sucesso para: {path}",
+        "ui.history.empty_runs": "Nenhuma execução registrada no histórico.",
+        # GUI: Conflict Resolution
+        "ui.conflicts.title": "Resolução de Conflitos — {name}",
+        "ui.conflicts.subtitle": (
+            "Os seguintes arquivos foram modificados simultaneamente nos dois lados. "
+            "Selecione a ação desejada para resolver cada conflito:"
+        ),
+        "ui.conflicts.no_conflicts": "Nenhum arquivo em conflito foi encontrado neste perfil.",
+        "ui.conflicts.table.file": "Arquivo",
+        "ui.conflicts.table.side_a": "Versão Lado A",
+        "ui.conflicts.table.side_b": "Versão Lado B",
+        "ui.conflicts.table.action": "Ação de Resolução",
+        "ui.conflicts.action.keep_side_a": "Manter Lado A",
+        "ui.conflicts.action.keep_side_b": "Manter Lado B",
+        "ui.conflicts.action.keep_both": "Manter Ambos (Renomeados)",
+        "ui.conflicts.action.delete_both": "Descartar Ambos",
+        "ui.conflicts.batch_label": "Marcar todos como:",
+        "ui.conflicts.btn_apply": "Aplicar Resoluções",
+        "ui.conflicts.btn_refresh": "Atualizar",
+        "ui.conflicts.btn_close": "Fechar",
+        "ui.conflicts.preview.title": "Pré-visualização do Arquivo",
+        "ui.conflicts.preview.side_a": "Lado A:",
+        "ui.conflicts.preview.side_b": "Lado B:",
+        "ui.conflicts.preview.not_available": (
+            "Pré-visualização de texto não disponível para este tipo de arquivo."
+        ),
+        "ui.conflicts.applied_msg": (
+            "{count} conflito(s) resolvido(s) com sucesso. "
+            "Execute uma sincronização para consolidar."
+        ),
+        "ui.conflicts.btn_sync_now": "Sincronizar Agora",
     },
 }
 
