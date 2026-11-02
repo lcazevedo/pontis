@@ -310,6 +310,75 @@ _CATALOG: dict[str, dict[str, str]] = {
         "ui.wizard.summary.advanced_filters": "Filters:",
         "ui.wizard.summary.advanced_filters_val": "{excludes} exclude(s), {includes} include(s)",
         "ui.wizard.summary.advanced_max_delete": "Max Delete:",
+        # GUI: Run Actions
+        "ui.actions.sync_now": "Sync Now",
+        "ui.actions.sync_now.tooltip": "Run synchronization for the selected profile",
+        "ui.actions.dry_run": "Simulate (Dry Run)",
+        "ui.actions.dry_run.tooltip": "Simulate synchronization without making changes",
+        # GUI: First Run Dialog
+        "ui.dialog.first_run.title": "First Run — Safety Simulation",
+        "ui.dialog.first_run.message": (
+            "This is the first time profile '{name}' is being synchronized.\n\n"
+            "For your safety, Pontis will first run a simulation (--dry-run) to show what will "
+            "change before any files are modified."
+        ),
+        "ui.dialog.first_run.btn_continue": "Run Simulation",
+        "ui.dialog.first_run.btn_cancel": "Cancel",
+        # GUI: Progress Dialog
+        "ui.progress.title_sync": "Synchronizing: {name}",
+        "ui.progress.title_dry_run": "Simulating: {name}",
+        "ui.progress.badge_sync": "SYNCHRONIZATION",
+        "ui.progress.badge_dry_run": "SIMULATION (DRY RUN)",
+        "ui.progress.status_starting": "Starting sync engine...",
+        "ui.progress.status_comparing": "Comparing files and detecting changes...",
+        "ui.progress.status_transferring": "Transferring files...",
+        "ui.progress.status_success": "Completed successfully",
+        "ui.progress.status_success_dry": "Simulation completed",
+        "ui.progress.status_cancelled": "Cancelled by user",
+        "ui.progress.status_error": "Synchronization failed",
+        "ui.progress.metric_transfers": "Transferred",
+        "ui.progress.metric_planned_transfers": "To Transfer",
+        "ui.progress.metric_deletes": "Deleted",
+        "ui.progress.metric_planned_deletes": "To Delete",
+        "ui.progress.metric_errors": "Errors",
+        "ui.progress.metric_speed": "Speed",
+        "ui.progress.metric_bytes": "Data",
+        "ui.progress.log_section": "Execution Log:",
+        "ui.progress.btn_cancel": "Cancel",
+        "ui.progress.btn_close": "Close",
+        "ui.progress.btn_show_summary": "View Summary & Apply...",
+        "ui.progress.cancel_confirm": (
+            "Are you sure you want to cancel the active synchronization?"
+        ),
+        "ui.progress.cancelling": "Cancelling...",
+        # GUI: Dry Run Summary
+        "ui.dry_run.title": "Simulation Summary — {name}",
+        "ui.dry_run.subtitle": "No files have been modified. Review the planned changes below.",
+        "ui.dry_run.tab_copies": "Copies / Transfers ({count})",
+        "ui.dry_run.tab_deletes": "Deletions ({count})",
+        "ui.dry_run.empty_copies": "No files need to be copied.",
+        "ui.dry_run.empty_deletes": "No files will be deleted.",
+        "ui.dry_run.mass_delete_warning": (
+            "Warning: {count} file(s) are planned to be permanently deleted!"
+        ),
+        "ui.dry_run.mass_delete_confirm": (
+            "I have reviewed the files and confirm that these deletions are intended."
+        ),
+        "ui.dry_run.btn_apply": "Run Real Synchronization Now",
+        "ui.dry_run.btn_cancel": "Close",
+        # GUI: Notifications
+        "ui.notify.sync_success_title": "Pontis — Sync Completed",
+        "ui.notify.sync_success_msg": "{name}: {count} file(s) transferred successfully.",
+        "ui.notify.dry_success_title": "Pontis — Simulation Completed",
+        "ui.notify.dry_success_msg": "{name}: {count} file(s) would be modified.",
+        "ui.notify.error_title": "Pontis — Synchronization Failed",
+        "ui.notify.error_msg": "{name}: an error occurred during synchronization.",
+        # GUI: Alerts
+        "ui.alert.already_running": "Profile '{name}' is already currently running.",
+        "ui.alert.endpoint_missing": (
+            "Local folder not found: {path}\n"
+            "Please check if the folder exists and if any external drive is connected."
+        ),
     },
     "pt_BR": {
         # Profile CLI messages
@@ -631,6 +700,77 @@ _CATALOG: dict[str, dict[str, str]] = {
             "{excludes} exclusão(ões), {includes} inclusão(ões)"
         ),
         "ui.wizard.summary.advanced_max_delete": "Limite exclusão:",
+        # GUI: Run Actions
+        "ui.actions.sync_now": "Sincronizar Agora",
+        "ui.actions.sync_now.tooltip": "Executar sincronização para o perfil selecionado",
+        "ui.actions.dry_run": "Simular (--dry-run)",
+        "ui.actions.dry_run.tooltip": "Simular a sincronização sem alterar arquivos",
+        # GUI: First Run Dialog
+        "ui.dialog.first_run.title": "Primeira Execução — Simulação de Segurança",
+        "ui.dialog.first_run.message": (
+            "Esta é a primeira vez que o perfil '{name}' será sincronizado.\n\n"
+            "Por segurança, o Pontis realizará primeiro uma simulação (--dry-run) para mostrar o "
+            "que mudará antes de modificar qualquer arquivo."
+        ),
+        "ui.dialog.first_run.btn_continue": "Iniciar Simulação",
+        "ui.dialog.first_run.btn_cancel": "Cancelar",
+        # GUI: Progress Dialog
+        "ui.progress.title_sync": "Sincronizando: {name}",
+        "ui.progress.title_dry_run": "Simulando: {name}",
+        "ui.progress.badge_sync": "SINCRONIZAÇÃO",
+        "ui.progress.badge_dry_run": "SIMULAÇÃO (--DRY-RUN)",
+        "ui.progress.status_starting": "Iniciando motor de sincronização...",
+        "ui.progress.status_comparing": "Comparando arquivos e detectando mudanças...",
+        "ui.progress.status_transferring": "Transferindo arquivos...",
+        "ui.progress.status_success": "Concluído com sucesso",
+        "ui.progress.status_success_dry": "Simulação concluída",
+        "ui.progress.status_cancelled": "Cancelado pelo usuário",
+        "ui.progress.status_error": "Falha na sincronização",
+        "ui.progress.metric_transfers": "Transferidos",
+        "ui.progress.metric_planned_transfers": "A Transferir",
+        "ui.progress.metric_deletes": "Excluídos",
+        "ui.progress.metric_planned_deletes": "A Excluir",
+        "ui.progress.metric_errors": "Erros",
+        "ui.progress.metric_speed": "Velocidade",
+        "ui.progress.metric_bytes": "Dados",
+        "ui.progress.log_section": "Registro de Execução (Log):",
+        "ui.progress.btn_cancel": "Cancelar",
+        "ui.progress.btn_close": "Fechar",
+        "ui.progress.btn_show_summary": "Ver Resumo e Aplicar...",
+        "ui.progress.cancel_confirm": (
+            "Tem certeza de que deseja cancelar a sincronização em andamento?"
+        ),
+        "ui.progress.cancelling": "Cancelando...",
+        # GUI: Dry Run Summary
+        "ui.dry_run.title": "Resumo da Simulação — {name}",
+        "ui.dry_run.subtitle": (
+            "Nenhum arquivo foi modificado ainda. Revise as alterações planejadas abaixo."
+        ),
+        "ui.dry_run.tab_copies": "Cópias / Transferências ({count})",
+        "ui.dry_run.tab_deletes": "Exclusões ({count})",
+        "ui.dry_run.empty_copies": "Nenhum arquivo precisa ser copiado.",
+        "ui.dry_run.empty_deletes": "Nenhum arquivo será excluído.",
+        "ui.dry_run.mass_delete_warning": (
+            "Atenção: {count} arquivo(s) estão planejados para serem excluídos permanentemente!"
+        ),
+        "ui.dry_run.mass_delete_confirm": (
+            "Revisei os arquivos e confirmo que estas exclusões são intencionais."
+        ),
+        "ui.dry_run.btn_apply": "Executar Sincronização Real Agora",
+        "ui.dry_run.btn_cancel": "Fechar",
+        # GUI: Notifications
+        "ui.notify.sync_success_title": "Pontis — Sincronização Concluída",
+        "ui.notify.sync_success_msg": "{name}: {count} arquivo(s) transferidos com sucesso.",
+        "ui.notify.dry_success_title": "Pontis — Simulação Concluída",
+        "ui.notify.dry_success_msg": "{name}: {count} arquivo(s) seriam alterados.",
+        "ui.notify.error_title": "Pontis — Falha na Sincronização",
+        "ui.notify.error_msg": "{name}: ocorreu um erro durante a sincronização.",
+        # GUI: Alerts
+        "ui.alert.already_running": "O perfil '{name}' já está em execução no momento.",
+        "ui.alert.endpoint_missing": (
+            "Pasta local não encontrada: {path}\n"
+            "Por favor, verifique se a pasta existe e se o disco está conectado."
+        ),
     },
 }
 

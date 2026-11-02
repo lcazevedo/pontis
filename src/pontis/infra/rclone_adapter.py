@@ -65,6 +65,14 @@ class AdapterOutcome:
     needs_resync: bool = False
     planned_copies: int = 0
     planned_deletes: int = 0
+    planned_copy_files: list[str] = field(default_factory=list)
+    planned_delete_files: list[str] = field(default_factory=list)
+    transferred_files: list[str] = field(default_factory=list)
+    deleted_files: list[str] = field(default_factory=list)
+    bytes_transferred: int = 0
+    total_bytes: int = 0
+    speed: float = 0.0
+    eta: int | None = None
 
 
 EventCallback = Callable[[LogEvent], None]
@@ -131,6 +139,13 @@ class RcloneAdapter:
         self._state_root = state_root
         self._config_path = config_path
         self._env = dict(env) if env is not None else None
+        self._current_process: subprocess.Popen[str] | None = None
+
+    def cancel(self) -> None:
+        """Terminate the active rclone process, if one is currently running."""
+        proc = self._current_process
+        if proc is not None and proc.poll() is None:
+            proc.terminate()
 
     def workdir(self, profile: SyncProfile) -> Path:
         """Bisync state directory of a profile."""
@@ -227,6 +242,7 @@ class RcloneAdapter:
             env=self._env,
         )
         assert proc.stderr is not None
+        self._current_process = proc
         try:
             for line in proc.stderr:
                 event = parse_log_line(line)
@@ -244,14 +260,44 @@ class RcloneAdapter:
                 proc.kill()
                 proc.wait()
             raise
+        finally:
+            self._current_process = None
         return outcome
 
     @staticmethod
     def _absorb(event: LogEvent, outcome: AdapterOutcome) -> None:
         if event.stats is not None:
-            outcome.transfers = int(event.stats.get("transfers", 0))
-            outcome.deletes = int(event.stats.get("deletes", 0))
-            outcome.errors = int(event.stats.get("errors", 0))
+            stats = event.stats
+            outcome.transfers = int(stats.get("transfers", outcome.transfers))
+            outcome.deletes = int(stats.get("deletes", outcome.deletes))
+            outcome.errors = int(stats.get("errors", outcome.errors))
+            outcome.bytes_transferred = int(stats.get("bytes", outcome.bytes_transferred))
+            outcome.total_bytes = int(stats.get("totalBytes", outcome.total_bytes))
+            outcome.speed = float(stats.get("speed", outcome.speed))
+            eta = stats.get("eta")
+            if isinstance(eta, int | float):
+                outcome.eta = int(eta)
+
+        msg = event.message
+        if "Skipped copy" in msg:
+            outcome.planned_copies += 1
+            if event.obj and event.obj not in outcome.planned_copy_files:
+                outcome.planned_copy_files.append(event.obj)
+        elif "Skipped delete" in msg:
+            outcome.planned_deletes += 1
+            if event.obj and event.obj not in outcome.planned_delete_files:
+                outcome.planned_delete_files.append(event.obj)
+        elif (
+            msg.startswith("Copied (new)")
+            or msg.startswith("Copied (replaced")
+            or msg.startswith("Copied")
+        ):
+            if event.obj and event.obj not in outcome.transferred_files:
+                outcome.transferred_files.append(event.obj)
+        elif msg.startswith("Deleted"):
+            if event.obj and event.obj not in outcome.deleted_files:
+                outcome.deleted_files.append(event.obj)
+
         if event.level in ("error", "critical") and event.message:
             outcome.error_messages.append(event.message)
             if "Must run --resync" in event.message:

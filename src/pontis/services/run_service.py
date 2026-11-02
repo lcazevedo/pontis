@@ -3,6 +3,7 @@
 
 from __future__ import annotations
 
+from collections.abc import Callable
 from pathlib import Path
 
 from pontis.domain.models import (
@@ -14,7 +15,7 @@ from pontis.domain.models import (
     utcnow,
 )
 from pontis.infra.locking import ProfileLock
-from pontis.infra.rclone_adapter import EventCallback, RcloneAdapter
+from pontis.infra.rclone_adapter import AdapterOutcome, EventCallback, RcloneAdapter
 from pontis.infra.repositories import RunRepository
 
 
@@ -46,6 +47,17 @@ class RunService:
         self._adapter = adapter
         self._runs = runs
         self._lock_dir = lock_dir
+        self.last_outcome: AdapterOutcome | None = None
+
+    def cancel(self) -> None:
+        """Cancel the active rclone process, if any."""
+        self._adapter.cancel()
+
+    def needs_first_run_dry_run(self, profile: SyncProfile) -> bool:
+        """Return True if the profile requires a successful initial dry-run."""
+        if profile.id is None:
+            return False
+        return self._adapter.needs_resync(profile) and not self._has_successful_dry_run(profile.id)
 
     def run(
         self,
@@ -54,6 +66,7 @@ class RunService:
         dry_run: bool = False,
         require_dry_run_first: bool = True,
         on_event: EventCallback | None = None,
+        on_outcome: Callable[[AdapterOutcome], None] | None = None,
     ) -> RunResult:
         """Run one profile and return the persisted :class:`RunResult`.
 
@@ -76,6 +89,9 @@ class RunService:
             result = self._runs.add(RunResult(profile_id=profile.id, dry_run=dry_run))
             try:
                 outcome = self._adapter.run(profile, dry_run=dry_run, on_event=on_event)
+                self.last_outcome = outcome
+                if on_outcome is not None:
+                    on_outcome(outcome)
             except KeyboardInterrupt:
                 self._finish(result, RunStatus.CANCELLED, "cancelled")
                 raise
@@ -86,6 +102,9 @@ class RunService:
             result.files_transferred = outcome.planned_copies if dry_run else outcome.transfers
             result.files_deleted = outcome.planned_deletes if dry_run else outcome.deletes
             result.errors = outcome.errors
+
+            if outcome.returncode in (-15, -9, 130, 143):
+                return self._finish(result, RunStatus.CANCELLED, "cancelled")
             if outcome.returncode == 0:
                 return self._finish(result, RunStatus.SUCCESS, "")
             message = "\n".join(outcome.error_messages[-5:]) or f"rclone exit {outcome.returncode}"

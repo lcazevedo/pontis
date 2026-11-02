@@ -21,14 +21,20 @@ from PySide6.QtWidgets import (
     QWidget,
 )
 
-from pontis.domain.models import RunStatus, SyncDirection
+from pontis.domain.models import RunResult, RunStatus, SyncDirection, SyncProfile
 from pontis.i18n import tr
-from pontis.infra.paths import config_dir
+from pontis.infra.keyring_store import KEY_RCLONE_CONFIG_PASS, KeyringStore
+from pontis.infra.paths import config_dir, default_db_path
 from pontis.infra.rclone import locate_rclone
+from pontis.infra.rclone_adapter import RcloneAdapter
+from pontis.infra.repositories import RunRepository
 from pontis.services.profile_service import ProfileService, ProfileSummary
 from pontis.services.remote_service import RemoteService
+from pontis.services.run_service import RunService
 from pontis.ui.advanced_options_dialog import AdvancedOptionsDialog
+from pontis.ui.dry_run_summary_dialog import DryRunSummaryDialog
 from pontis.ui.icons import get_icon
+from pontis.ui.sync_progress_dialog import SyncProgressDialog
 from pontis.ui.theme import ThemeMode, apply_theme
 from pontis.ui.widgets.empty_state import EmptyStateWidget
 from pontis.ui.wizard import ProfileWizard
@@ -44,6 +50,7 @@ class MainWindow(QMainWindow):
         self,
         service: ProfileService | None = None,
         remote_service: RemoteService | None = None,
+        run_service: RunService | None = None,
         db_path: Path | None = None,
         rclone_binary: Path | str | None = None,
         rclone_config: Path | None = None,
@@ -67,6 +74,27 @@ class MainWindow(QMainWindow):
                 binary=self._rclone_binary, config_path=self._rclone_config
             )
 
+        if run_service is not None:
+            self._run_service = run_service
+        else:
+            state_root = (db_path.parent if db_path else default_db_path().parent) / "bisync"
+            lock_dir = (db_path.parent if db_path else default_db_path().parent) / "locks"
+            keyring_store = KeyringStore()
+            password = keyring_store.get_password(KEY_RCLONE_CONFIG_PASS)
+            env = {"RCLONE_CONFIG_PASS": password} if password else None
+            adapter = RcloneAdapter(
+                self._rclone_binary,
+                state_root,
+                config_path=self._rclone_config,
+                env=env,
+            )
+            self._run_service = RunService(
+                adapter,
+                RunRepository(self._service.connection),
+                lock_dir=lock_dir,
+            )
+
+        self._running_profile_ids: set[int] = set()
         self._summaries: list[ProfileSummary] = []
         self._current_theme: ThemeMode = ThemeMode.SYSTEM
 
@@ -87,6 +115,20 @@ class MainWindow(QMainWindow):
 
     def _create_actions(self) -> None:
         """Create QAction instances for toolbar and menus."""
+        self._action_sync = QAction(
+            get_icon("media-playback-start"), tr("ui.actions.sync_now"), self
+        )
+        self._action_sync.setToolTip(tr("ui.actions.sync_now.tooltip"))
+        self._action_sync.setShortcut(QKeySequence("Ctrl+R"))
+        self._action_sync.setEnabled(False)
+        self._action_sync.triggered.connect(self._on_sync_now)
+
+        self._action_dry_run = QAction(get_icon("view-refresh"), tr("ui.actions.dry_run"), self)
+        self._action_dry_run.setToolTip(tr("ui.actions.dry_run.tooltip"))
+        self._action_dry_run.setShortcut(QKeySequence("Ctrl+Shift+R"))
+        self._action_dry_run.setEnabled(False)
+        self._action_dry_run.triggered.connect(self._on_dry_run)
+
         self._action_new = QAction(get_icon("list-add"), tr("ui.actions.new"), self)
         self._action_new.setToolTip(tr("ui.actions.new.tooltip"))
         self._action_new.setShortcut(QKeySequence("Ctrl+N"))
@@ -128,6 +170,9 @@ class MainWindow(QMainWindow):
         toolbar.setMovable(False)
         toolbar.setToolButtonStyle(Qt.ToolButtonStyle.ToolButtonTextBesideIcon)
 
+        toolbar.addAction(self._action_sync)
+        toolbar.addAction(self._action_dry_run)
+        toolbar.addSeparator()
         toolbar.addAction(self._action_new)
         toolbar.addAction(self._action_edit)
         toolbar.addAction(self._action_advanced)
@@ -183,6 +228,9 @@ class MainWindow(QMainWindow):
         file_menu.addAction(self._action_quit)
 
         profile_menu = menubar.addMenu(tr("ui.menu.profile"))
+        profile_menu.addAction(self._action_sync)
+        profile_menu.addAction(self._action_dry_run)
+        profile_menu.addSeparator()
         profile_menu.addAction(self._action_new)
         profile_menu.addAction(self._action_edit)
         profile_menu.addAction(self._action_advanced)
@@ -286,7 +334,10 @@ class MainWindow(QMainWindow):
             self._table.setItem(row, 4, QTableWidgetItem(last_run_str))
 
             # Column 5: Status with icon
-            status_item = self._build_status_item(last_run)
+            if profile.id in self._running_profile_ids:
+                status_item = QTableWidgetItem(get_icon("status_running"), tr("ui.status.running"))
+            else:
+                status_item = self._build_status_item(last_run)
             self._table.setItem(row, 5, status_item)
 
         self._stack.setCurrentIndex(0)
@@ -295,8 +346,6 @@ class MainWindow(QMainWindow):
 
     def _build_status_item(self, last_run: object) -> QTableWidgetItem:
         """Format the execution status cell with a colored icon."""
-        from pontis.domain.models import RunResult
-
         if not isinstance(last_run, RunResult):
             item = QTableWidgetItem(get_icon("status_never_run"), tr("ui.status.never_run"))
             return item
@@ -330,14 +379,26 @@ class MainWindow(QMainWindow):
     def _on_selection_changed(self) -> None:
         """Update action availability based on table selection."""
         selected = self._selected_summary()
-        self._action_delete.setEnabled(selected is not None)
-        self._action_edit.setEnabled(selected is not None)
-        self._action_advanced.setEnabled(selected is not None)
+        has_sel = selected is not None and selected.profile.id is not None
+        profile_id = (
+            selected.profile.id
+            if (selected is not None and selected.profile.id is not None)
+            else None
+        )
+        is_running = (profile_id in self._running_profile_ids) if profile_id is not None else False
+        self._action_sync.setEnabled(has_sel and not is_running)
+        self._action_dry_run.setEnabled(has_sel and not is_running)
+        self._action_delete.setEnabled(has_sel and not is_running)
+        self._action_edit.setEnabled(has_sel and not is_running)
+        self._action_advanced.setEnabled(has_sel and not is_running)
 
     def _on_table_context_menu(self, pos: QPoint) -> None:
         """Show context menu on right-click."""
         menu = QMenu(self)
         if self._selected_summary() is not None:
+            menu.addAction(self._action_sync)
+            menu.addAction(self._action_dry_run)
+            menu.addSeparator()
             menu.addAction(self._action_edit)
             menu.addAction(self._action_advanced)
             menu.addAction(self._action_delete)
@@ -345,6 +406,95 @@ class MainWindow(QMainWindow):
         menu.addAction(self._action_new)
         menu.addAction(self._action_refresh)
         menu.exec(self._table.viewport().mapToGlobal(pos))
+
+    def _on_sync_now(self) -> None:
+        """Execute real synchronization or safety dry-run if first time."""
+        summary = self._selected_summary()
+        if summary is None or summary.profile.id is None:
+            return
+        profile = summary.profile
+        if profile.id in self._running_profile_ids:
+            QMessageBox.warning(
+                self,
+                tr("ui.actions.sync_now"),
+                tr("ui.alert.already_running", name=profile.name),
+            )
+            return
+
+        if self._run_service.needs_first_run_dry_run(profile):
+            reply = QMessageBox.information(
+                self,
+                tr("ui.dialog.first_run.title"),
+                tr("ui.dialog.first_run.message", name=profile.name),
+                QMessageBox.StandardButton.Ok | QMessageBox.StandardButton.Cancel,
+                QMessageBox.StandardButton.Ok,
+            )
+            if reply != QMessageBox.StandardButton.Ok:
+                return
+            self._execute_profile(profile, dry_run=True, is_first_run=True)
+            return
+
+        self._execute_profile(profile, dry_run=False)
+
+    def _on_dry_run(self) -> None:
+        """Run a simulation (dry-run) for the selected sync profile."""
+        summary = self._selected_summary()
+        if summary is None or summary.profile.id is None:
+            return
+        profile = summary.profile
+        if profile.id in self._running_profile_ids:
+            QMessageBox.warning(
+                self,
+                tr("ui.actions.dry_run"),
+                tr("ui.alert.already_running", name=profile.name),
+            )
+            return
+        self._execute_profile(profile, dry_run=True)
+
+    def _execute_profile(
+        self, profile: SyncProfile, *, dry_run: bool, is_first_run: bool = False
+    ) -> None:
+        """Launch the sync progress dialog and track execution lifecycle."""
+        if profile.id is None:
+            return
+        self._running_profile_ids.add(profile.id)
+        self.load_profiles()
+        self._on_selection_changed()
+
+        apply_real_after_dry_run = False
+
+        dialog = SyncProgressDialog(
+            profile,
+            self._run_service,
+            dry_run=dry_run,
+            parent=self,
+        )
+
+        def _on_apply_requested() -> None:
+            nonlocal apply_real_after_dry_run
+            apply_real_after_dry_run = True
+
+        dialog.apply_real_sync_requested.connect(_on_apply_requested)
+        dialog.exec()
+
+        self._running_profile_ids.discard(profile.id)
+        self.load_profiles()
+        self._on_selection_changed()
+
+        if apply_real_after_dry_run:
+            self._execute_profile(profile, dry_run=False)
+            return
+
+        # If it was a first-run dry run and finished with success, present summary
+        if (
+            is_first_run
+            and dialog.run_result
+            and dialog.run_result.status == RunStatus.SUCCESS
+            and not apply_real_after_dry_run
+        ):
+            summary_dialog = DryRunSummaryDialog(profile, dialog.outcome, parent=self)
+            if summary_dialog.exec() and summary_dialog.should_apply_sync:
+                self._execute_profile(profile, dry_run=False)
 
     def _on_advanced_options(self) -> None:
         """Open the advanced options dialog for the selected sync profile."""

@@ -3,8 +3,8 @@
 
 from __future__ import annotations
 
-from PySide6.QtCore import Qt
-from PySide6.QtGui import QColor, QIcon, QPainter, QPen, QPixmap
+from PySide6.QtCore import QPoint, Qt
+from PySide6.QtGui import QColor, QIcon, QPainter, QPen, QPixmap, QPolygon
 
 _ICON_CACHE: dict[str, QIcon] = {}
 
@@ -109,6 +109,30 @@ def _create_fallback_icon(name: str) -> QIcon:
         painter.drawRect(8, 8, 11, 12)
         painter.drawLine(5, 16, 5, 5)
         painter.drawLine(5, 5, 15, 5)
+    elif name in ("media-playback-start", "play", "sync-start"):
+        painter.setPen(Qt.PenStyle.NoPen)
+        painter.setBrush(QColor(46, 125, 50))
+        triangle = QPolygon([QPoint(7, 5), QPoint(19, 12), QPoint(7, 19)])
+        painter.drawPolygon(triangle)
+    elif name in ("media-playback-stop", "process-stop", "stop"):
+        painter.setPen(Qt.PenStyle.NoPen)
+        painter.setBrush(QColor(198, 40, 40))
+        painter.drawRect(6, 6, 12, 12)
+    elif name in ("dialog-warning", "warning"):
+        painter.setPen(Qt.PenStyle.NoPen)
+        painter.setBrush(QColor(245, 124, 0))
+        triangle = QPolygon([QPoint(12, 4), QPoint(21, 20), QPoint(3, 20)])
+        painter.drawPolygon(triangle)
+        painter.setPen(QPen(QColor(255, 255, 255), 2.0))
+        painter.drawLine(12, 10, 12, 14)
+        painter.drawPoint(12, 17)
+    elif name in ("dialog-information", "info"):
+        painter.setPen(Qt.PenStyle.NoPen)
+        painter.setBrush(QColor(25, 118, 210))
+        painter.drawEllipse(5, 5, 14, 14)
+        painter.setPen(QPen(QColor(255, 255, 255), 2.0))
+        painter.drawPoint(12, 8)
+        painter.drawLine(12, 11, 12, 16)
     elif name == "status_cancelled":
         painter.setPen(Qt.PenStyle.NoPen)
         painter.setBrush(QColor(239, 108, 0))
