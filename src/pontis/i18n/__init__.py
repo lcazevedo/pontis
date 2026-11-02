@@ -351,6 +351,15 @@ _CATALOG: dict[str, dict[str, str]] = {
             "Are you sure you want to cancel the active synchronization?"
         ),
         "ui.progress.cancelling": "Cancelling...",
+        "ui.progress.status_too_many_deletes": (
+            "Safety abort: too many deletions detected (max-delete limit exceeded)"
+        ),
+        "ui.progress.btn_confirm_force": "Confirm Deletions & Run with --force",
+        "ui.progress.force_confirm_prompt": (
+            "The safety deletion threshold was exceeded (common when renaming files or deleting "
+            "items in folders with few files).\n\n"
+            "Are you sure these deletions are intended and want to proceed with --force?"
+        ),
         # GUI: Dry Run Summary
         "ui.dry_run.title": "Simulation Summary — {name}",
         "ui.dry_run.subtitle": "No files have been modified. Review the planned changes below.",
@@ -741,6 +750,15 @@ _CATALOG: dict[str, dict[str, str]] = {
             "Tem certeza de que deseja cancelar a sincronização em andamento?"
         ),
         "ui.progress.cancelling": "Cancelando...",
+        "ui.progress.status_too_many_deletes": (
+            "Bloqueio de segurança: muitas exclusões detectadas (limite max-delete)"
+        ),
+        "ui.progress.btn_confirm_force": "Confirmar Exclusão e Executar com --force",
+        "ui.progress.force_confirm_prompt": (
+            "O limite de segurança de exclusões foi ultrapassado (comum ao renomear arquivos ou "
+            "apagar itens em pastas com poucos arquivos).\n\n"
+            "Tem certeza de que estas alterações são intencionais e deseja continuar com --force?"
+        ),
         # GUI: Dry Run Summary
         "ui.dry_run.title": "Resumo da Simulação — {name}",
         "ui.dry_run.subtitle": (

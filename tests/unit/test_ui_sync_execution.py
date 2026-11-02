@@ -395,3 +395,56 @@ def test_cloud_browser_shows_loading_indicator_and_loads_dirs(
     assert dialog._folder_list.count() == 3
     assert dialog._folder_list.item(0).text() == "Documents"
     assert not dialog._lbl_status.isVisible()
+
+
+def test_sync_progress_dialog_too_many_deletes_shows_force_button(
+    qtbot: QtBot, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    profile = _make_profile(tmp_path)
+    mock_run_service = MagicMock(spec=RunService)
+    error_result = RunResult(
+        profile_id=1, status=RunStatus.ERROR, message="Safety abort: too many deletes"
+    )
+    mock_run_service.run.return_value = error_result
+    error_outcome = AdapterOutcome(
+        returncode=1,
+        command=["rclone"],
+        is_too_many_deletes=True,
+        error_messages=["Safety abort: too many deletes (>50%, 1 of 1)"],
+    )
+    mock_run_service.last_outcome = error_outcome
+
+    dialog = SyncProgressDialog(profile, mock_run_service, dry_run=True)
+    qtbot.addWidget(dialog)
+    dialog.show()
+
+    # Simulate finishing with too many deletes error
+    dialog._on_finished(error_result, error_outcome)
+
+    assert not dialog._btn_force.isHidden()
+    status_text = dialog._status_label.text()
+    assert "Bloqueio de segurança" in status_text or "Safety abort" in status_text
+
+    # User clicks force button
+    monkeypatch.setattr(
+        QMessageBox,
+        "question",
+        lambda *args, **kwargs: QMessageBox.StandardButton.Yes,
+    )
+
+    force_requested: list[bool] = []
+    dialog.force_sync_requested.connect(force_requested.append)
+    dialog._on_force_clicked()
+
+    assert len(force_requested) == 1
+    assert force_requested[0] is True  # is dry_run
+
+
+def test_rclone_adapter_build_command_with_force(tmp_path: Path) -> None:
+    adapter = RcloneAdapter("rclone", tmp_path / "state")
+    profile = _make_profile(tmp_path)
+    cmd_normal = adapter.build_command(profile, resync=False, force=False)
+    cmd_forced = adapter.build_command(profile, resync=False, force=True)
+
+    assert "--force" not in cmd_normal
+    assert "--force" in cmd_forced

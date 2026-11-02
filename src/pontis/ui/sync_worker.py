@@ -32,12 +32,14 @@ class SyncWorker(QThread):
         run_service: RunService,
         *,
         dry_run: bool = False,
+        force: bool = False,
         parent: QObject | None = None,
     ) -> None:
         super().__init__(parent)
         self._profile = profile
         self._run_service = run_service
         self._dry_run = dry_run
+        self._force = force
         self._is_cancelled = False
 
     @property
@@ -79,6 +81,7 @@ class SyncWorker(QThread):
                 self._profile,
                 dry_run=self._dry_run,
                 require_dry_run_first=False,
+                force=self._force,
                 on_event=_on_event,
                 on_outcome=_on_outcome,
             )

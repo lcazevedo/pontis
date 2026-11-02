@@ -456,7 +456,12 @@ class MainWindow(QMainWindow):
         self._execute_profile(profile, dry_run=True)
 
     def _execute_profile(
-        self, profile: SyncProfile, *, dry_run: bool, is_first_run: bool = False
+        self,
+        profile: SyncProfile,
+        *,
+        dry_run: bool,
+        is_first_run: bool = False,
+        force: bool = False,
     ) -> None:
         """Launch the sync progress dialog and track execution lifecycle."""
         if profile.id is None:
@@ -466,11 +471,13 @@ class MainWindow(QMainWindow):
         self._on_selection_changed()
 
         apply_real_after_dry_run = False
+        apply_real_force = False
 
         dialog = SyncProgressDialog(
             profile,
             self._run_service,
             dry_run=dry_run,
+            force=force,
             parent=self,
         )
 
@@ -478,7 +485,16 @@ class MainWindow(QMainWindow):
             nonlocal apply_real_after_dry_run
             apply_real_after_dry_run = True
 
+        def _on_force_requested(is_dry: bool) -> None:
+            nonlocal apply_real_after_dry_run, apply_real_force
+            if is_dry:
+                self._execute_profile(profile, dry_run=True, force=True)
+            else:
+                apply_real_after_dry_run = True
+                apply_real_force = True
+
         dialog.apply_real_sync_requested.connect(_on_apply_requested)
+        dialog.force_sync_requested.connect(_on_force_requested)
         dialog.exec()
 
         self._running_profile_ids.discard(profile.id)
@@ -486,7 +502,7 @@ class MainWindow(QMainWindow):
         self._on_selection_changed()
 
         if apply_real_after_dry_run:
-            self._execute_profile(profile, dry_run=False)
+            self._execute_profile(profile, dry_run=False, force=apply_real_force)
             return
 
         # If it was a first-run dry run and finished with success, present summary
@@ -498,7 +514,7 @@ class MainWindow(QMainWindow):
         ):
             summary_dialog = DryRunSummaryDialog(profile, dialog.outcome, parent=self)
             if summary_dialog.exec() and summary_dialog.should_apply_sync:
-                self._execute_profile(profile, dry_run=False)
+                self._execute_profile(profile, dry_run=False, force=summary_dialog.apply_with_force)
 
     def _on_advanced_options(self) -> None:
         """Open the advanced options dialog for the selected sync profile."""

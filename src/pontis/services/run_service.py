@@ -65,6 +65,7 @@ class RunService:
         *,
         dry_run: bool = False,
         require_dry_run_first: bool = True,
+        force: bool = False,
         on_event: EventCallback | None = None,
         on_outcome: Callable[[AdapterOutcome], None] | None = None,
     ) -> RunResult:
@@ -88,7 +89,9 @@ class RunService:
 
             result = self._runs.add(RunResult(profile_id=profile.id, dry_run=dry_run))
             try:
-                outcome = self._adapter.run(profile, dry_run=dry_run, on_event=on_event)
+                outcome = self._adapter.run(
+                    profile, dry_run=dry_run, force=force, on_event=on_event
+                )
                 self.last_outcome = outcome
                 if on_outcome is not None:
                     on_outcome(outcome)

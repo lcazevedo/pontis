@@ -40,6 +40,7 @@ class DryRunSummaryDialog(QDialog):
         self._profile = profile
         self._outcome = outcome
         self._should_apply_sync = False
+        self._apply_with_force = False
 
         self.setWindowTitle(tr("ui.dry_run.title", name=profile.name))
         self.resize(650, 480)
@@ -51,6 +52,11 @@ class DryRunSummaryDialog(QDialog):
     def should_apply_sync(self) -> bool:
         """True if the user chose to proceed with the real synchronization."""
         return self._should_apply_sync
+
+    @property
+    def apply_with_force(self) -> bool:
+        """True if the synchronization should proceed with --force (user confirmed deletions)."""
+        return self._apply_with_force
 
     def _init_ui(self) -> None:
         layout = QVBoxLayout(self)
@@ -157,4 +163,7 @@ class DryRunSummaryDialog(QDialog):
 
     def _on_apply(self) -> None:
         self._should_apply_sync = True
+        deletes = self._outcome.planned_delete_files if self._outcome else []
+        if deletes:
+            self._apply_with_force = True
         self.accept()

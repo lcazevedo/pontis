@@ -73,6 +73,7 @@ class AdapterOutcome:
     total_bytes: int = 0
     speed: float = 0.0
     eta: int | None = None
+    is_too_many_deletes: bool = False
 
 
 EventCallback = Callable[[LogEvent], None]
@@ -167,6 +168,7 @@ class RcloneAdapter:
         *,
         dry_run: bool = False,
         resync: bool | None = None,
+        force: bool = False,
     ) -> list[str]:
         """Build the full rclone command line.
 
@@ -196,6 +198,8 @@ class RcloneAdapter:
                 ]
             if opts.check_access:
                 cmd.append("--check-access")
+            if force:
+                cmd.append("--force")
         else:
             src, dst = (a, b) if opts.direction is SyncDirection.A_TO_B else (b, a)
             cmd += ["sync", src, dst]
@@ -219,6 +223,7 @@ class RcloneAdapter:
         profile: SyncProfile,
         *,
         dry_run: bool = False,
+        force: bool = False,
         on_event: EventCallback | None = None,
     ) -> AdapterOutcome:
         """Run rclone for the profile, streaming parsed log events to ``on_event``.
@@ -229,7 +234,7 @@ class RcloneAdapter:
         """
         if profile.id is None:
             raise ValueError("Profile must be saved before running.")
-        command = self.build_command(profile, dry_run=dry_run)
+        command = self.build_command(profile, dry_run=dry_run, force=force)
         if profile.options.direction is SyncDirection.BIDIRECTIONAL:
             self.workdir(profile).mkdir(parents=True, exist_ok=True)
         outcome = AdapterOutcome(returncode=-1, command=command)
@@ -302,3 +307,7 @@ class RcloneAdapter:
             outcome.error_messages.append(event.message)
             if "Must run --resync" in event.message:
                 outcome.needs_resync = True
+            if "too many deletes" in event.message.lower() or "max-delete" in event.message.lower():
+                outcome.is_too_many_deletes = True
+        elif "too many deletes" in event.message.lower():
+            outcome.is_too_many_deletes = True

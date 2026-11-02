@@ -53,6 +53,7 @@ class SyncProgressDialog(QDialog):
 
     run_finished = Signal(object, object)  # (RunResult, AdapterOutcome | None)
     apply_real_sync_requested = Signal()
+    force_sync_requested = Signal(bool)
 
     def __init__(
         self,
@@ -60,12 +61,14 @@ class SyncProgressDialog(QDialog):
         run_service: RunService,
         *,
         dry_run: bool = False,
+        force: bool = False,
         parent: QWidget | None = None,
     ) -> None:
         super().__init__(parent)
         self._profile = profile
         self._run_service = run_service
         self._dry_run = dry_run
+        self._force = force
         self._is_active = True
         self._result: RunResult | None = None
         self._outcome: AdapterOutcome | None = None
@@ -187,6 +190,14 @@ class SyncProgressDialog(QDialog):
         self._btn_summary.clicked.connect(self._on_show_summary)
         btn_layout.addWidget(self._btn_summary)
 
+        self._btn_force = QPushButton(
+            get_icon("dialog-warning"), tr("ui.progress.btn_confirm_force"), self
+        )
+        self._btn_force.setVisible(False)
+        self._btn_force.setStyleSheet("font-weight: bold; color: #b45309;")
+        self._btn_force.clicked.connect(self._on_force_clicked)
+        btn_layout.addWidget(self._btn_force)
+
         btn_layout.addStretch()
 
         self._btn_cancel = QPushButton(get_icon("process-stop"), tr("ui.progress.btn_cancel"), self)
@@ -205,6 +216,7 @@ class SyncProgressDialog(QDialog):
             self._profile,
             self._run_service,
             dry_run=self._dry_run,
+            force=self._force,
             parent=self,
         )
         self._worker.progress_signal.connect(self._on_progress)
@@ -305,8 +317,18 @@ class SyncProgressDialog(QDialog):
             self._status_label.setStyleSheet("color: #e65100; font-weight: bold;")
         else:
             self._progress_bar.setValue(0)
-            self._status_label.setText(f"✗ {tr('ui.progress.status_error')}")
-            self._status_label.setStyleSheet("color: #c62828; font-weight: bold;")
+            is_too_many = (
+                outcome.is_too_many_deletes
+                if outcome is not None
+                else ("too many deletes" in result.message.lower())
+            )
+            if is_too_many:
+                self._status_label.setText(f"⚠ {tr('ui.progress.status_too_many_deletes')}")
+                self._status_label.setStyleSheet("color: #d84315; font-weight: bold;")
+                self._btn_force.setVisible(True)
+            else:
+                self._status_label.setText(f"✗ {tr('ui.progress.status_error')}")
+                self._status_label.setStyleSheet("color: #c62828; font-weight: bold;")
             send_notification(
                 tr("ui.notify.error_title"),
                 tr("ui.notify.error_msg", name=self._profile.name),
@@ -314,6 +336,18 @@ class SyncProgressDialog(QDialog):
             )
 
         self.run_finished.emit(result, outcome)
+
+    def _on_force_clicked(self) -> None:
+        reply = QMessageBox.question(
+            self,
+            tr("ui.progress.btn_confirm_force"),
+            tr("ui.progress.force_confirm_prompt"),
+            QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No,
+            QMessageBox.StandardButton.No,
+        )
+        if reply == QMessageBox.StandardButton.Yes:
+            self.force_sync_requested.emit(self._dry_run)
+            self.accept()
 
     def _on_error(self, message: str) -> None:
         self._is_active = False
