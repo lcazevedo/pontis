@@ -28,6 +28,7 @@ FORBIDDEN_EXTRA_FLAGS: frozenset[str] = frozenset(
         "--use-json-log",
         "--log-file",
         "--remove-empty-dirs",
+        "--suffix-keep-extension",
     }
 )
 """Flags the app controls itself; users may not pass them as free-form flags."""
@@ -193,6 +194,8 @@ class RcloneAdapter:
 
         if opts.direction is SyncDirection.BIDIRECTIONAL:
             cmd += ["bisync", a, b, "--workdir", str(self.workdir(profile))]
+            if "--suffix-keep-extension" not in cmd:
+                cmd.append("--suffix-keep-extension")
             do_resync = self.needs_resync(profile) if resync is None else resync
             if do_resync:
                 cmd += ["--resync", "--resync-mode", "newer"]
@@ -348,9 +351,11 @@ class RcloneAdapter:
         m_rename = re.search(r"Renaming Path\d+ copy\s+-\s+(.+)", msg)
         if m_rename:
             renamed_path = m_rename.group(1).strip()
-            # Extract base name from conflict path (e.g. ".../file.txt.conflict1" -> "file.txt")
+            # Extract base name from conflict path
+            # (e.g. ".../file.conflict1.txt" or ".../file.txt.conflict1" -> "file.txt")
             base_cand = Path(renamed_path).name
-            clean_cand = re.sub(r"\.conflict\d+$", "", base_cand)
+            clean_cand = re.sub(r"\.conflict\d+(\.[^.]+)?$", r"\1", base_cand)
+            clean_cand = re.sub(r"\.conflict\d+$", "", clean_cand)
             if clean_cand and clean_cand not in outcome.conflicts_detected:
                 outcome.conflicts_detected.append(clean_cand)
 

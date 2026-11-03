@@ -88,6 +88,7 @@ def test_build_command_bidirectional_first_run(tmp_path: Path) -> None:
     assert cmd[cmd.index("--bwlimit") + 1] == "1M"
     assert cmd[cmd.index("--transfers") + 1] == "2"
     assert "--drive-skip-gdocs" in cmd
+    assert "--suffix-keep-extension" in cmd
 
 
 def test_build_command_regular_run_uses_safety_flags(tmp_path: Path) -> None:

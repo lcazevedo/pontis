@@ -50,7 +50,7 @@ class ConflictItem:
     side_b_file: ConflictFileInfo | None = None
 
 
-_CONFLICT_PATTERN = re.compile(r"^(.*?)\.conflict([12])$")
+_CONFLICT_PATTERN = re.compile(r"^(.*?)\.conflict([12])(\.[^.]+)?$")
 
 
 def _read_preview(path: Path, max_lines: int = 15) -> str:
@@ -112,7 +112,8 @@ class ConflictService:
                     full_p = Path(root) / fname
                     rel_p = str(full_p.relative_to(local_root))
                     parent_p = Path(rel_p).parent
-                    base_rel = str(parent_p / m.group(1)) if parent_p != Path(".") else m.group(1)
+                    base_fname = f"{m.group(1)}{m.group(3) or ''}"
+                    base_rel = str(parent_p / base_fname) if parent_p != Path(".") else base_fname
                     try:
                         stat = full_p.stat()
                         size = stat.st_size
@@ -186,8 +187,9 @@ class ConflictService:
                             with contextlib.suppress(ValueError):
                                 mtime = datetime.fromisoformat(parts[2].replace("Z", "+00:00"))
                         parent_p = Path(rel_path).parent
+                        base_fname = f"{m.group(1)}{m.group(3) or ''}"
                         base_rel = (
-                            str(parent_p / m.group(1)) if parent_p != Path(".") else m.group(1)
+                            str(parent_p / base_fname) if parent_p != Path(".") else base_fname
                         )
                         full_remote = f"{remote_target}/{rel_path}"
                         c_info = ConflictFileInfo(
@@ -236,8 +238,16 @@ class ConflictService:
     ) -> bool:
         """Resolve conflict on a local filesystem directory."""
         target = root / base_rel
-        c1 = root / f"{base_rel}.conflict1"
-        c2 = root / f"{base_rel}.conflict2"
+        stem, suffix = _split_stem_suffix(target.name)
+        parent = target.parent
+
+        c1_cand1 = parent / f"{stem}.conflict1{suffix}"
+        c1_cand2 = root / f"{base_rel}.conflict1"
+        c1 = c1_cand1 if c1_cand1.is_file() else c1_cand2
+
+        c2_cand1 = parent / f"{stem}.conflict2{suffix}"
+        c2_cand2 = root / f"{base_rel}.conflict2"
+        c2 = c2_cand1 if c2_cand1.is_file() else c2_cand2
 
         try:
             target.parent.mkdir(parents=True, exist_ok=True)
@@ -252,8 +262,6 @@ class ConflictService:
                 if c1.is_file():
                     c1.unlink(missing_ok=True)
             elif resolution == ConflictResolution.KEEP_BOTH:
-                stem, suffix = _split_stem_suffix(target.name)
-                parent = target.parent
                 new_a = parent / f"{stem} (Side A){suffix}"
                 new_b = parent / f"{stem} (Side B){suffix}"
                 if c1.is_file():
@@ -276,8 +284,14 @@ class ConflictService:
         """Resolve conflict on a remote cloud endpoint via rclone commands."""
         remote_root = endpoint.to_rclone()
         target_path = f"{remote_root}/{base_rel}"
-        c1_path = f"{remote_root}/{base_rel}.conflict1"
-        c2_path = f"{remote_root}/{base_rel}.conflict2"
+        stem, suffix = _split_stem_suffix(Path(base_rel).name)
+        parent = str(Path(base_rel).parent)
+        prefix = f"{remote_root}/{parent}/" if parent != "." else f"{remote_root}/"
+
+        c1_cand1 = f"{prefix}{stem}.conflict1{suffix}"
+        c1_cand2 = f"{remote_root}/{base_rel}.conflict1"
+        c2_cand1 = f"{prefix}{stem}.conflict2{suffix}"
+        c2_cand2 = f"{remote_root}/{base_rel}.conflict2"
 
         def _rclone_run(*args: str) -> bool:
             cmd = [self._binary, *args]
@@ -289,23 +303,28 @@ class ConflictService:
             except Exception:
                 return False
 
+        def _move_first(cand1: str, cand2: str, dst: str) -> None:
+            if not _rclone_run("moveto", cand1, dst):
+                _rclone_run("moveto", cand2, dst)
+
+        def _del_both(cand1: str, cand2: str) -> None:
+            _rclone_run("deletefile", cand1)
+            _rclone_run("deletefile", cand2)
+
         if resolution == ConflictResolution.KEEP_SIDE_A:
-            _rclone_run("moveto", c1_path, target_path)
-            _rclone_run("deletefile", c2_path)
+            _move_first(c1_cand1, c1_cand2, target_path)
+            _del_both(c2_cand1, c2_cand2)
         elif resolution == ConflictResolution.KEEP_SIDE_B:
-            _rclone_run("moveto", c2_path, target_path)
-            _rclone_run("deletefile", c1_path)
+            _move_first(c2_cand1, c2_cand2, target_path)
+            _del_both(c1_cand1, c1_cand2)
         elif resolution == ConflictResolution.KEEP_BOTH:
-            stem, suffix = _split_stem_suffix(Path(base_rel).name)
-            parent = str(Path(base_rel).parent)
-            prefix = f"{remote_root}/{parent}/" if parent != "." else f"{remote_root}/"
             new_a = f"{prefix}{stem} (Side A){suffix}"
             new_b = f"{prefix}{stem} (Side B){suffix}"
-            _rclone_run("moveto", c1_path, new_a)
-            _rclone_run("moveto", c2_path, new_b)
+            _move_first(c1_cand1, c1_cand2, new_a)
+            _move_first(c2_cand1, c2_cand2, new_b)
         elif resolution == ConflictResolution.DELETE_BOTH:
-            _rclone_run("deletefile", c1_path)
-            _rclone_run("deletefile", c2_path)
+            _del_both(c1_cand1, c1_cand2)
+            _del_both(c2_cand1, c2_cand2)
 
         return True
 

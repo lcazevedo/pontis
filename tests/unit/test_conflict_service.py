@@ -303,3 +303,34 @@ def test_end_to_end_conflict_resolution_and_history(tmp_path: Path) -> None:
     prof_svc.export_run_log(run2.id, export_path, log_dir=log_dir)  # type: ignore[arg-type]
     assert export_path.is_file()
     assert "New or changed in both paths" in export_path.read_text(encoding="utf-8")
+
+
+def test_conflict_scanning_and_resolve_with_kept_extension(tmp_path: Path) -> None:
+    side_a = tmp_path / "side_a"
+    side_b = tmp_path / "side_b"
+    side_a.mkdir()
+    side_b.mkdir()
+
+    # Conflicted pair preserving .docx extension:
+    # documento.conflict1.docx and documento.conflict2.docx
+    (side_a / "documento.conflict1.docx").write_text("Versão A", encoding="utf-8")
+    (side_a / "documento.conflict2.docx").write_text("Versão B", encoding="utf-8")
+    (side_b / "documento.conflict1.docx").write_text("Versão A", encoding="utf-8")
+    (side_b / "documento.conflict2.docx").write_text("Versão B", encoding="utf-8")
+
+    profile = _make_profile(side_a, side_b)
+    service = ConflictService()
+    conflicts = service.scan_conflicts(profile)
+
+    assert len(conflicts) == 1
+    assert conflicts[0].base_name == "documento.docx"
+
+    # Resolve with KEEP_SIDE_A
+    ok = service.resolve_conflict(profile, conflicts[0], ConflictResolution.KEEP_SIDE_A)
+    assert ok is True
+    assert (side_a / "documento.docx").is_file()
+    assert (side_a / "documento.docx").read_text(encoding="utf-8") == "Versão A"
+    assert not (side_a / "documento.conflict1.docx").exists()
+    assert not (side_a / "documento.conflict2.docx").exists()
+    assert (side_b / "documento.docx").is_file()
+    assert (side_b / "documento.docx").read_text(encoding="utf-8") == "Versão A"
