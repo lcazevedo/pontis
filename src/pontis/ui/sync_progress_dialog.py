@@ -5,9 +5,10 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING, Any
 
-from PySide6.QtCore import Signal
+from PySide6.QtCore import Qt, Signal
 from PySide6.QtGui import QCloseEvent
 from PySide6.QtWidgets import (
+    QApplication,
     QDialog,
     QFrame,
     QGridLayout,
@@ -21,7 +22,7 @@ from PySide6.QtWidgets import (
     QWidget,
 )
 
-from pontis.domain.models import RunStatus
+from pontis.domain.models import ConflictPolicy, RunStatus
 from pontis.i18n import tr
 from pontis.ui.dry_run_summary_dialog import DryRunSummaryDialog
 from pontis.ui.icons import get_icon
@@ -384,8 +385,14 @@ class SyncProgressDialog(QDialog):
 
         if outcome is not None and outcome.has_conflicts:
             count = len(outcome.conflicts_detected)
-            self._btn_conflicts.setText(f"⚠️ {tr('ui.progress.btn_resolve_conflicts')} ({count})")
-            self._btn_conflicts.setVisible(True)
+            if self._profile.options.conflict_policy == ConflictPolicy.KEEP_BOTH:
+                self._log_edit.appendPlainText(
+                    f"ℹ️ {tr('ui.progress.conflicts_kept_both_log', count=count)}"
+                )
+            else:
+                btn_lbl = f"⚠️ {tr('ui.progress.btn_resolve_conflicts')} ({count})"
+                self._btn_conflicts.setText(btn_lbl)
+                self._btn_conflicts.setVisible(True)
 
         self.run_finished.emit(result, outcome)
 
@@ -406,7 +413,12 @@ class SyncProgressDialog(QDialog):
         """Open the conflict resolution dialog."""
         from pontis.ui.conflict_resolution_dialog import ConflictResolutionDialog
 
-        dialog = ConflictResolutionDialog(self._profile, parent=self)
+        QApplication.setOverrideCursor(Qt.CursorShape.WaitCursor)
+        try:
+            dialog = ConflictResolutionDialog(self._profile, parent=self)
+        finally:
+            QApplication.restoreOverrideCursor()
+
         if dialog.exec() and dialog.should_sync_after:
             self.apply_real_sync_requested.emit()
             self.accept()

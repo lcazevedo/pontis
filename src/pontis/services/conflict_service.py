@@ -150,6 +150,7 @@ class ConflictService:
                 "pst",
                 "--include",
                 "*.conflict*",
+                "--drive-skip-gdocs",
             ]
             if self._config_path:
                 cmd += ["--config", str(self._config_path)]

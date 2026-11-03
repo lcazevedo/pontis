@@ -201,12 +201,14 @@ class ConflictResolutionDialog(QDialog):
 
         # Bottom Buttons
         bottom_layout = QHBoxLayout()
-        self._status_label = QLabel(self)
+        self._status_label = QLabel(tr("ui.conflicts.scanning"), self)
+        self._status_label.setStyleSheet("color: #757575;")
         bottom_layout.addWidget(self._status_label)
         bottom_layout.addStretch()
 
         self._btn_apply = QPushButton(tr("ui.conflicts.btn_apply"), self)
         self._btn_apply.setStyleSheet("font-weight: bold;")
+        self._btn_apply.setEnabled(False)
         self._btn_apply.clicked.connect(self._on_apply)
         bottom_layout.addWidget(self._btn_apply)
 
@@ -224,62 +226,75 @@ class ConflictResolutionDialog(QDialog):
 
     def load_conflicts(self) -> None:
         """Scan profile for conflict files and update table."""
-        self._conflicts = self._service.scan_conflicts(self._profile)
-        self._combos.clear()
-        self._table.setRowCount(len(self._conflicts))
+        from PySide6.QtWidgets import QApplication
 
-        if not self._conflicts:
-            self._table.setRowCount(0)
-            self._status_label.setText(tr("ui.conflicts.no_conflicts"))
-            self._status_label.setStyleSheet("color: #2e7d32; font-weight: bold;")
-            self._btn_apply.setEnabled(False)
-            self._clear_previews()
-            return
+        QApplication.setOverrideCursor(Qt.CursorShape.WaitCursor)
+        self._status_label.setText(tr("ui.conflicts.scanning"))
+        self._status_label.setStyleSheet("color: #757575;")
+        self._btn_refresh.setEnabled(False)
+        self._btn_apply.setEnabled(False)
+        QApplication.processEvents()
 
-        self._btn_apply.setEnabled(True)
-        self._status_label.setText(f"{len(self._conflicts)} conflict(s)")
-        self._status_label.setStyleSheet("")
+        try:
+            self._conflicts = self._service.scan_conflicts(self._profile)
+            self._combos.clear()
+            self._table.setRowCount(len(self._conflicts))
 
-        for row, item in enumerate(self._conflicts):
-            # 0: File name
-            name_widget = QTableWidgetItem(item.base_name)
-            name_widget.setData(Qt.ItemDataRole.UserRole, item)
-            self._table.setItem(row, 0, name_widget)
+            if not self._conflicts:
+                self._table.setRowCount(0)
+                self._status_label.setText(tr("ui.conflicts.no_conflicts"))
+                self._status_label.setStyleSheet("color: #2e7d32; font-weight: bold;")
+                self._btn_apply.setEnabled(False)
+                self._clear_previews()
+                return
 
-            # 1: Side A
-            a_str = "—"
-            if item.side_a_file:
-                sz = _format_size(item.side_a_file.size)
-                dt = (
-                    item.side_a_file.modified.strftime("%Y-%m-%d %H:%M")
-                    if item.side_a_file.modified
-                    else ""
-                )
-                a_str = f"{sz} ({dt})" if dt else sz
-            self._table.setItem(row, 1, QTableWidgetItem(a_str))
+            self._btn_apply.setEnabled(True)
+            self._status_label.setText(tr("ui.conflicts.count_found", count=len(self._conflicts)))
+            self._status_label.setStyleSheet("")
 
-            # 2: Side B
-            b_str = "—"
-            if item.side_b_file:
-                sz = _format_size(item.side_b_file.size)
-                dt = (
-                    item.side_b_file.modified.strftime("%Y-%m-%d %H:%M")
-                    if item.side_b_file.modified
-                    else ""
-                )
-                b_str = f"{sz} ({dt})" if dt else sz
-            self._table.setItem(row, 2, QTableWidgetItem(b_str))
+            for row, item in enumerate(self._conflicts):
+                # 0: File name
+                name_widget = QTableWidgetItem(item.base_name)
+                name_widget.setData(Qt.ItemDataRole.UserRole, item)
+                self._table.setItem(row, 0, name_widget)
 
-            # 3: Action combo box
-            combo = QComboBox(self)
-            combo.addItem(tr("ui.conflicts.action.keep_side_a"), ConflictResolution.KEEP_SIDE_A)
-            combo.addItem(tr("ui.conflicts.action.keep_side_b"), ConflictResolution.KEEP_SIDE_B)
-            combo.addItem(tr("ui.conflicts.action.keep_both"), ConflictResolution.KEEP_BOTH)
-            combo.addItem(tr("ui.conflicts.action.delete_both"), ConflictResolution.DELETE_BOTH)
-            self._combos[item.base_name] = combo
-            self._table.setCellWidget(row, 3, combo)
+                # 1: Side A
+                a_str = "—"
+                if item.side_a_file:
+                    sz = _format_size(item.side_a_file.size)
+                    dt = (
+                        item.side_a_file.modified.strftime("%Y-%m-%d %H:%M")
+                        if item.side_a_file.modified
+                        else ""
+                    )
+                    a_str = f"{sz} ({dt})" if dt else sz
+                self._table.setItem(row, 1, QTableWidgetItem(a_str))
 
-        self._table.selectRow(0)
+                # 2: Side B
+                b_str = "—"
+                if item.side_b_file:
+                    sz = _format_size(item.side_b_file.size)
+                    dt = (
+                        item.side_b_file.modified.strftime("%Y-%m-%d %H:%M")
+                        if item.side_b_file.modified
+                        else ""
+                    )
+                    b_str = f"{sz} ({dt})" if dt else sz
+                self._table.setItem(row, 2, QTableWidgetItem(b_str))
+
+                # 3: Action combo box
+                combo = QComboBox(self)
+                combo.addItem(tr("ui.conflicts.action.keep_side_a"), ConflictResolution.KEEP_SIDE_A)
+                combo.addItem(tr("ui.conflicts.action.keep_side_b"), ConflictResolution.KEEP_SIDE_B)
+                combo.addItem(tr("ui.conflicts.action.keep_both"), ConflictResolution.KEEP_BOTH)
+                combo.addItem(tr("ui.conflicts.action.delete_both"), ConflictResolution.DELETE_BOTH)
+                self._combos[item.base_name] = combo
+                self._table.setCellWidget(row, 3, combo)
+
+            self._table.selectRow(0)
+        finally:
+            self._btn_refresh.setEnabled(True)
+            QApplication.restoreOverrideCursor()
 
     def _set_all_resolutions(self, action: ConflictResolution) -> None:
         """Batch set all combo boxes to the given resolution action."""
@@ -323,7 +338,14 @@ class ConflictResolutionDialog(QDialog):
         if not resolutions:
             return
 
-        results = self._service.resolve_all(self._profile, resolutions)
+        from PySide6.QtWidgets import QApplication
+
+        QApplication.setOverrideCursor(Qt.CursorShape.WaitCursor)
+        try:
+            results = self._service.resolve_all(self._profile, resolutions)
+        finally:
+            QApplication.restoreOverrideCursor()
+
         resolved_count = sum(1 for v in results.values() if v)
 
         msg = tr("ui.conflicts.applied_msg", count=resolved_count)

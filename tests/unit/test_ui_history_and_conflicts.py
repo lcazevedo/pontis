@@ -3,6 +3,7 @@
 
 from __future__ import annotations
 
+import dataclasses
 from typing import TYPE_CHECKING
 from unittest.mock import MagicMock, patch
 
@@ -10,6 +11,7 @@ from PySide6.QtGui import QGuiApplication
 from PySide6.QtWidgets import QMessageBox
 
 from pontis.domain.models import (
+    ConflictPolicy,
     Endpoint,
     RunResult,
     RunStatus,
@@ -215,7 +217,11 @@ def test_sync_progress_resync_handling(qtbot: QtBot, tmp_path: Path) -> None:
 
 
 def test_sync_progress_conflict_handling(qtbot: QtBot, tmp_path: Path) -> None:
-    profile = _create_test_profile(tmp_path)
+    # 1. With KEEP_BOTH, files are preserved per policy; no disruptive conflict button is shown.
+    profile_keep_both = _create_test_profile(tmp_path)
+    profile_keep_both.options = dataclasses.replace(
+        profile_keep_both.options, conflict_policy=ConflictPolicy.KEEP_BOTH
+    )
     res_ok = RunResult(profile_id=1, status=RunStatus.SUCCESS)
     outcome_conflicts = AdapterOutcome(
         returncode=0,
@@ -226,13 +232,29 @@ def test_sync_progress_conflict_handling(qtbot: QtBot, tmp_path: Path) -> None:
     run_service.run.return_value = res_ok
     run_service.last_outcome = outcome_conflicts
 
-    dialog = SyncProgressDialog(profile, run_service, dry_run=False)
-    qtbot.addWidget(dialog)
-    dialog.show()
+    dialog1 = SyncProgressDialog(profile_keep_both, run_service, dry_run=False)
+    qtbot.addWidget(dialog1)
+    dialog1.show()
 
-    dialog._on_finished(res_ok, outcome_conflicts)
-    assert not dialog._btn_conflicts.isHidden()
-    assert "2" in dialog._btn_conflicts.text()
+    dialog1._on_finished(res_ok, outcome_conflicts)
+    assert dialog1._btn_conflicts.isHidden()
+    assert (
+        "Preservar ambos" in dialog1._log_edit.toPlainText()
+        or "Keep both" in dialog1._log_edit.toPlainText()
+    )
+
+    # 2. With another policy, button is displayed to allow manual resolution if needed.
+    profile_newer = _create_test_profile(tmp_path)
+    profile_newer.options = dataclasses.replace(
+        profile_newer.options, conflict_policy=ConflictPolicy.NEWER
+    )
+    dialog2 = SyncProgressDialog(profile_newer, run_service, dry_run=False)
+    qtbot.addWidget(dialog2)
+    dialog2.show()
+
+    dialog2._on_finished(res_ok, outcome_conflicts)
+    assert not dialog2._btn_conflicts.isHidden()
+    assert "2" in dialog2._btn_conflicts.text()
 
 
 def test_main_window_history_and_conflicts_actions(qtbot: QtBot, tmp_path: Path) -> None:

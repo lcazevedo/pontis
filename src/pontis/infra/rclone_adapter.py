@@ -220,6 +220,8 @@ class RcloneAdapter:
         if opts.transfers is not None:
             cmd += ["--transfers", str(opts.transfers)]
         cmd += list(opts.extra_flags)
+        if "--drive-skip-gdocs" not in cmd:
+            cmd.append("--drive-skip-gdocs")
         cmd += ["--use-json-log", "-v", "--stats", "1s"]
         if dry_run:
             cmd.append("--dry-run")

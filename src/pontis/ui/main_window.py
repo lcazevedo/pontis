@@ -566,12 +566,19 @@ class MainWindow(QMainWindow):
         summary = self._selected_summary()
         if summary is None or summary.profile.id is None:
             return
-        dialog = ConflictResolutionDialog(
-            profile=summary.profile,
-            rclone_binary=self._rclone_binary,
-            rclone_config=self._rclone_config,
-            parent=self,
-        )
+        from PySide6.QtWidgets import QApplication
+
+        QApplication.setOverrideCursor(Qt.CursorShape.WaitCursor)
+        try:
+            dialog = ConflictResolutionDialog(
+                profile=summary.profile,
+                rclone_binary=self._rclone_binary,
+                rclone_config=self._rclone_config,
+                parent=self,
+            )
+        finally:
+            QApplication.restoreOverrideCursor()
+
         if dialog.exec() and dialog.should_sync_after:
             self._execute_profile(summary.profile, dry_run=False)
 

@@ -421,6 +421,9 @@ _CATALOG: dict[str, dict[str, str]] = {
         ),
         "ui.progress.btn_resync": "Resync (--resync)...",
         "ui.progress.conflicts_alert": "⚠️ Conflicts detected in {count} file(s).",
+        "ui.progress.conflicts_kept_both_log": (
+            "Conflicts detected: both versions were preserved as configured (Keep both)."
+        ),
         "ui.progress.btn_resolve_conflicts": "Resolve Conflicts...",
         "ui.dialog.resync_confirm.title": "Confirm Resync",
         "ui.dialog.resync_confirm.message": (
@@ -468,6 +471,8 @@ _CATALOG: dict[str, dict[str, str]] = {
             "The following files were modified simultaneously on both sides. "
             "Choose how to resolve each conflict:"
         ),
+        "ui.conflicts.scanning": "Scanning for conflict files...",
+        "ui.conflicts.count_found": "{count} conflict(s) found",
         "ui.conflicts.no_conflicts": "No conflicted files found in this profile.",
         "ui.conflicts.table.file": "File",
         "ui.conflicts.table.side_a": "Side A Version",
@@ -923,6 +928,10 @@ _CATALOG: dict[str, dict[str, str]] = {
         ),
         "ui.progress.btn_resync": "Ressincronizar (--resync)...",
         "ui.progress.conflicts_alert": "⚠️ Conflitos detectados em {count} arquivo(s).",
+        "ui.progress.conflicts_kept_both_log": (
+            "Conflitos detectados: ambas as versões foram preservadas conforme "
+            "a política configurada (Preservar ambos)."
+        ),
         "ui.progress.btn_resolve_conflicts": "Resolver Conflitos...",
         "ui.dialog.resync_confirm.title": "Confirmar Ressincronização",
         "ui.dialog.resync_confirm.message": (
@@ -972,6 +981,8 @@ _CATALOG: dict[str, dict[str, str]] = {
             "Os seguintes arquivos foram modificados simultaneamente nos dois lados. "
             "Selecione a ação desejada para resolver cada conflito:"
         ),
+        "ui.conflicts.scanning": "Buscando arquivos em conflito...",
+        "ui.conflicts.count_found": "{count} conflito(s) encontrado(s)",
         "ui.conflicts.no_conflicts": "Nenhum arquivo em conflito foi encontrado neste perfil.",
         "ui.conflicts.table.file": "Arquivo",
         "ui.conflicts.table.side_a": "Versão Lado A",
