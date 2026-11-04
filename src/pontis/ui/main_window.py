@@ -9,6 +9,7 @@ from PySide6.QtCore import QPoint, Qt
 from PySide6.QtGui import QAction, QActionGroup, QCloseEvent, QKeySequence
 from PySide6.QtWidgets import (
     QAbstractItemView,
+    QFileDialog,
     QHeaderView,
     QMainWindow,
     QMenu,
@@ -29,6 +30,7 @@ from pontis.infra.paths import config_dir, default_db_path
 from pontis.infra.rclone import locate_rclone
 from pontis.infra.rclone_adapter import RcloneAdapter
 from pontis.infra.repositories import RunRepository
+from pontis.services.import_export_service import ProfileTransfer, ScriptImporter
 from pontis.services.profile_service import ProfileService, ProfileSummary
 from pontis.services.remote_service import RemoteService
 from pontis.services.run_service import RunService
@@ -39,6 +41,7 @@ from pontis.ui.history_dialog import HistoryDialog
 from pontis.ui.icons import get_icon
 from pontis.ui.sync_progress_dialog import SyncProgressDialog
 from pontis.ui.theme import ThemeMode, apply_theme
+from pontis.ui.watch_dialog import WatchDialog
 from pontis.ui.widgets.empty_state import EmptyStateWidget
 from pontis.ui.wizard import ProfileWizard
 
@@ -179,6 +182,31 @@ class MainWindow(QMainWindow):
         self._action_refresh.setShortcut(QKeySequence("F5"))
         self._action_refresh.triggered.connect(self._on_refresh)
 
+        self._action_watch = QAction(get_icon("system-search"), tr("ui.actions.watch"), self)
+        self._action_watch.setToolTip(tr("ui.actions.watch.tooltip"))
+        self._action_watch.setShortcut(QKeySequence("Ctrl+W"))
+        self._action_watch.setEnabled(False)
+        self._action_watch.triggered.connect(self._on_watch_profile)
+
+        self._action_import_profile = QAction(
+            get_icon("document-open"), tr("ui.actions.import_profile"), self
+        )
+        self._action_import_profile.setToolTip(tr("ui.actions.import_profile.tooltip"))
+        self._action_import_profile.triggered.connect(self._on_import_profile)
+
+        self._action_export_profile = QAction(
+            get_icon("document-save-as"), tr("ui.actions.export_profile"), self
+        )
+        self._action_export_profile.setToolTip(tr("ui.actions.export_profile.tooltip"))
+        self._action_export_profile.setEnabled(False)
+        self._action_export_profile.triggered.connect(self._on_export_profile)
+
+        self._action_import_script = QAction(
+            get_icon("text-x-script"), tr("ui.actions.import_script"), self
+        )
+        self._action_import_script.setToolTip(tr("ui.actions.import_script.tooltip"))
+        self._action_import_script.triggered.connect(self._on_import_script)
+
         self._action_quit = QAction(tr("ui.actions.quit"), self)
         self._action_quit.setToolTip(tr("ui.actions.quit.tooltip"))
         self._action_quit.setShortcut(QKeySequence("Ctrl+Q"))
@@ -192,6 +220,7 @@ class MainWindow(QMainWindow):
 
         toolbar.addAction(self._action_sync)
         toolbar.addAction(self._action_dry_run)
+        toolbar.addAction(self._action_watch)
         toolbar.addSeparator()
         toolbar.addAction(self._action_new)
         toolbar.addAction(self._action_edit)
@@ -247,17 +276,27 @@ class MainWindow(QMainWindow):
         file_menu = menubar.addMenu(tr("ui.menu.file"))
         file_menu.addAction(self._action_new)
         file_menu.addSeparator()
+        file_menu.addAction(self._action_import_profile)
+        file_menu.addAction(self._action_import_script)
+        file_menu.addAction(self._action_export_profile)
+        file_menu.addSeparator()
         file_menu.addAction(self._action_quit)
 
         profile_menu = menubar.addMenu(tr("ui.menu.profile"))
         profile_menu.addAction(self._action_sync)
         profile_menu.addAction(self._action_dry_run)
+        profile_menu.addAction(self._action_watch)
         profile_menu.addSeparator()
         profile_menu.addAction(self._action_new)
         profile_menu.addAction(self._action_edit)
         profile_menu.addAction(self._action_advanced)
         profile_menu.addAction(self._action_conflicts)
         profile_menu.addAction(self._action_history)
+        profile_menu.addSeparator()
+        profile_menu.addAction(self._action_import_profile)
+        profile_menu.addAction(self._action_import_script)
+        profile_menu.addAction(self._action_export_profile)
+        profile_menu.addSeparator()
         profile_menu.addAction(self._action_delete)
         profile_menu.addAction(self._action_refresh)
 
@@ -412,10 +451,12 @@ class MainWindow(QMainWindow):
         is_running = (profile_id in self._running_profile_ids) if profile_id is not None else False
         self._action_sync.setEnabled(has_sel and not is_running)
         self._action_dry_run.setEnabled(has_sel and not is_running)
+        self._action_watch.setEnabled(has_sel and not is_running)
         self._action_delete.setEnabled(has_sel and not is_running)
         self._action_edit.setEnabled(has_sel and not is_running)
         self._action_advanced.setEnabled(has_sel and not is_running)
         self._action_conflicts.setEnabled(has_sel and not is_running)
+        self._action_export_profile.setEnabled(has_sel and not is_running)
 
     def _on_table_context_menu(self, pos: QPoint) -> None:
         """Show context menu on right-click."""
@@ -423,17 +464,21 @@ class MainWindow(QMainWindow):
         if self._selected_summary() is not None:
             menu.addAction(self._action_sync)
             menu.addAction(self._action_dry_run)
+            menu.addAction(self._action_watch)
             menu.addSeparator()
             menu.addAction(self._action_edit)
             menu.addAction(self._action_advanced)
             menu.addAction(self._action_conflicts)
             menu.addAction(self._action_history)
+            menu.addAction(self._action_export_profile)
             menu.addAction(self._action_delete)
             menu.addSeparator()
         else:
             menu.addAction(self._action_history)
             menu.addSeparator()
         menu.addAction(self._action_new)
+        menu.addAction(self._action_import_profile)
+        menu.addAction(self._action_import_script)
         menu.addAction(self._action_refresh)
         menu.exec(self._table.viewport().mapToGlobal(pos))
 
@@ -666,6 +711,112 @@ class MainWindow(QMainWindow):
         """Switch between Light, Dark, and System appearance."""
         self._current_theme = mode
         apply_theme(self, mode)
+
+    def _on_import_profile(self) -> None:
+        """Import profiles from a JSON file."""
+        file_path, _ = QFileDialog.getOpenFileName(
+            self,
+            tr("ui.dialog.import_profile.title"),
+            "",
+            tr("ui.dialog.import_profile.filter"),
+        )
+        if not file_path:
+            return
+
+        try:
+            profiles = ProfileTransfer.import_from_file(file_path)
+            saved = self._service.import_profiles(profiles, on_conflict="rename")
+            self.load_profiles()
+            names = ", ".join(p.name for p in saved)
+            QMessageBox.information(
+                self,
+                tr("ui.dialog.import_profile.title"),
+                tr("profile.imported_count", count=len(saved), names=names),
+            )
+        except Exception as err:
+            QMessageBox.critical(
+                self,
+                tr("ui.dialog.import_profile.title"),
+                str(err),
+            )
+
+    def _on_export_profile(self) -> None:
+        """Export the selected profile to a JSON file."""
+        summary = self._selected_summary()
+        if summary is None or summary.profile.id is None:
+            return
+
+        profile = summary.profile
+        default_file = f"{profile.name.strip().replace(' ', '_')}.json"
+        file_path, _ = QFileDialog.getSaveFileName(
+            self,
+            tr("ui.dialog.export_profile.title"),
+            default_file,
+            tr("ui.dialog.export_profile.filter"),
+        )
+        if not file_path:
+            return
+
+        try:
+            ProfileTransfer.export_to_file(profile, file_path)
+            self.statusBar().showMessage(
+                tr("profile.exported", count=1, path=file_path),
+                4000,
+            )
+        except Exception as err:
+            QMessageBox.critical(
+                self,
+                tr("ui.dialog.export_profile.title"),
+                str(err),
+            )
+
+    def _on_import_script(self) -> None:
+        """Import folders and options from a shell script (e.g. sync.sh)."""
+        file_path, _ = QFileDialog.getOpenFileName(
+            self,
+            tr("ui.dialog.import_script.title"),
+            "",
+            tr("ui.dialog.import_script.filter"),
+        )
+        if not file_path:
+            return
+
+        try:
+            imported_profile = ScriptImporter.parse_file(file_path)
+        except Exception as err:
+            QMessageBox.critical(
+                self,
+                tr("ui.dialog.import_script.title"),
+                tr("script.import_failed", error=str(err)),
+            )
+            return
+
+        # Open wizard pre-filled with the imported profile for review and saving
+        wizard = ProfileWizard(
+            service=self._service,
+            remote_service=self._remote_service,
+            profile=imported_profile,
+            parent=self,
+        )
+        if wizard.exec() and wizard.saved_profile is not None:
+            self.statusBar().showMessage(
+                tr("ui.statusbar.profile_created", name=wizard.saved_profile.name), 4000
+            )
+            self.load_profiles()
+
+    def _on_watch_profile(self) -> None:
+        """Open watchdog observation dialog for the selected profile."""
+        summary = self._selected_summary()
+        if summary is None or summary.profile.id is None:
+            return
+
+        dialog = WatchDialog(
+            profile=summary.profile,
+            run_service=self._run_service,
+            parent=self,
+        )
+        dialog.exec()
+        self.load_profiles()
 
     def closeEvent(self, event: QCloseEvent) -> None:
         """Clean up resources on window close."""

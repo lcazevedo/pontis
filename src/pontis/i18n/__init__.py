@@ -494,6 +494,78 @@ _CATALOG: dict[str, dict[str, str]] = {
             "{count} conflict(s) resolved successfully. Run sync to consolidate."
         ),
         "ui.conflicts.btn_sync_now": "Sync Now",
+        # Import/Export/Watch CLI & Service messages
+        "profile.exported": "Exported {count} profile(s) to '{path}'.",
+        "profile.exported_stdout": "Exported {count} profile(s).",
+        "profile.imported_count": "Imported {count} profile(s): {names}",
+        "profile.import_none": "No profiles were imported.",
+        "profile.export_not_found": "Profile '{name}' not found.",
+        "script.imported": "Imported profile '{name}' from script '{path}'.",
+        "script.import_failed": "Failed to import script: {error}",
+        "watch.starting": "Watching '{name}' on: {paths} (debounce: {debounce}s)...",
+        "watch.file_changed": "[{time}] File {type}: {path}",
+        "watch.triggering_sync": "[{time}] Debounce reached: triggering sync...",
+        "watch.sync_finished": (
+            "[{time}] Sync finished: {transferred} transferred, {deleted} deleted, {errors} errors."
+        ),
+        "watch.stopped": "Watchdog stopped.",
+        "watch.no_local": "Profile '{name}' has no local directories to watch.",
+        # GUI Actions
+        "ui.actions.import_profile": "Import Profile...",
+        "ui.actions.import_profile.tooltip": "Import sync profiles from a JSON file",
+        "ui.actions.export_profile": "Export Profile...",
+        "ui.actions.export_profile.tooltip": "Export the selected profile to a JSON file",
+        "ui.actions.import_script": "Import Shell Script...",
+        "ui.actions.import_script.tooltip": "Import folders and filters from a sync.sh script",
+        "ui.actions.watch": "Watch with Watchdog...",
+        "ui.actions.watch.tooltip": "Monitor local folder and sync changes automatically (Ctrl+W)",
+        # GUI Dialogs - Import/Export
+        "ui.dialog.import_profile.title": "Import Profile",
+        "ui.dialog.import_profile.filter": "JSON Files (*.json);;All Files (*)",
+        "ui.dialog.export_profile.title": "Export Profile",
+        "ui.dialog.export_profile.filter": "JSON Files (*.json);;All Files (*)",
+        "ui.dialog.import_script.title": "Import Shell Script",
+        "ui.dialog.import_script.filter": "Shell Scripts (*.sh);;All Files (*)",
+        # GUI Dialogs - Watchdog
+        "ui.dialog.watch.title": "Watchdog — {name}",
+        "ui.dialog.watch.description": (
+            "Monitors changes in the local directory and triggers synchronization after a "
+            "pause in file modifications (debounce)."
+        ),
+        "ui.dialog.watch.folder_label": "Monitored Folders:",
+        "ui.dialog.watch.none": "None",
+        "ui.dialog.watch.debounce_label": "Debounce Pause:",
+        "ui.dialog.watch.seconds": "seconds",
+        "ui.dialog.watch.debounce_tooltip": (
+            "Wait time without changes before initiating synchronization"
+        ),
+        "ui.dialog.watch.dry_run_label": "Simulation mode (--dry-run)",
+        "ui.dialog.watch.dry_run_tooltip": (
+            "Simulate transfers and deletions without modifying files"
+        ),
+        "ui.dialog.watch.status_label": "Current Status:",
+        "ui.dialog.watch.status_idle": "Idle / Stopped",
+        "ui.dialog.watch.status_watching": "Active — Observing file changes",
+        "ui.dialog.watch.status_syncing": "Synchronizing changes...",
+        "ui.dialog.watch.events_log": "Event and Sync Log",
+        "ui.dialog.watch.clear_log": "Clear Log",
+        "ui.dialog.watch.start": "Start Watching",
+        "ui.dialog.watch.stop": "Stop Watching",
+        "ui.dialog.watch.close": "Close",
+        "ui.dialog.watch.no_local_folder_warning": (
+            "Warning: Profile has no local folder accessible on disk."
+        ),
+        "ui.dialog.watch.started_log": "Observation started for folders: {folders}",
+        "ui.dialog.watch.stopped_log": "Observation stopped.",
+        "ui.dialog.watch.change_detected": "Change detected ({type}): {path}",
+        "ui.dialog.watch.sync_queued_busy": (
+            "Sync currently in progress; new sync will run after current one finishes."
+        ),
+        "ui.dialog.watch.sync_starting": "Debounce timer expired. Starting sync {mode}...",
+        "ui.dialog.watch.sync_finished": (
+            "Sync complete ({status}): {transferred} transferred, {deleted} deleted."
+        ),
+        "ui.dialog.watch.sync_error": "Sync error: {error}",
     },
     "pt_BR": {
         # Profile CLI messages
@@ -1007,6 +1079,85 @@ _CATALOG: dict[str, dict[str, str]] = {
             "Execute uma sincronização para consolidar."
         ),
         "ui.conflicts.btn_sync_now": "Sincronizar Agora",
+        # Import/Export/Watch CLI & Service messages
+        "profile.exported": "{count} perfil(is) exportado(s) para '{path}'.",
+        "profile.exported_stdout": "{count} perfil(is) exportado(s).",
+        "profile.imported_count": "{count} perfil(is) importado(s): {names}",
+        "profile.import_none": "Nenhum perfil foi importado.",
+        "profile.export_not_found": "Perfil '{name}' não encontrado.",
+        "script.imported": "Perfil '{name}' importado do script '{path}'.",
+        "script.import_failed": "Falha ao importar script: {error}",
+        "watch.starting": "Observando '{name}' em: {paths} (debounce: {debounce}s)...",
+        "watch.file_changed": "[{time}] Arquivo {type}: {path}",
+        "watch.triggering_sync": "[{time}] Debounce atingido: disparando sincronização...",
+        "watch.sync_finished": (
+            "[{time}] Sincronização finalizada: {transferred} transferidos, "
+            "{deleted} apagados, {errors} erros."
+        ),
+        "watch.stopped": "Observação interrompida.",
+        "watch.no_local": "O perfil '{name}' não possui pastas locais para observar.",
+        # GUI Actions
+        "ui.actions.import_profile": "Importar Perfil...",
+        "ui.actions.import_profile.tooltip": (
+            "Importar perfis de sincronização a partir de um arquivo JSON"
+        ),
+        "ui.actions.export_profile": "Exportar Perfil...",
+        "ui.actions.export_profile.tooltip": "Exportar o perfil selecionado para um arquivo JSON",
+        "ui.actions.import_script": "Importar Script Shell...",
+        "ui.actions.import_script.tooltip": "Importar pastas e filtros de um script sync.sh",
+        "ui.actions.watch": "Observar com Watchdog...",
+        "ui.actions.watch.tooltip": (
+            "Monitorar pasta local e sincronizar alterações automaticamente (Ctrl+W)"
+        ),
+        # GUI Dialogs - Import/Export
+        "ui.dialog.import_profile.title": "Importar Perfil",
+        "ui.dialog.import_profile.filter": "Arquivos JSON (*.json);;Todos os Arquivos (*)",
+        "ui.dialog.export_profile.title": "Exportar Perfil",
+        "ui.dialog.export_profile.filter": "Arquivos JSON (*.json);;Todos os Arquivos (*)",
+        "ui.dialog.import_script.title": "Importar Script Shell",
+        "ui.dialog.import_script.filter": "Scripts Shell (*.sh);;Todos os Arquivos (*)",
+        # GUI Dialogs - Watchdog
+        "ui.dialog.watch.title": "Watchdog — {name}",
+        "ui.dialog.watch.description": (
+            "Monitora alterações na pasta local e dispara a sincronização automaticamente "
+            "após uma pausa nas modificações (debounce)."
+        ),
+        "ui.dialog.watch.folder_label": "Pastas monitoradas:",
+        "ui.dialog.watch.none": "Nenhuma",
+        "ui.dialog.watch.debounce_label": "Tempo de pausa (debounce):",
+        "ui.dialog.watch.seconds": "segundos",
+        "ui.dialog.watch.debounce_tooltip": (
+            "Tempo de espera sem modificações antes de iniciar a sincronização"
+        ),
+        "ui.dialog.watch.dry_run_label": "Modo simulação (--dry-run)",
+        "ui.dialog.watch.dry_run_tooltip": (
+            "Simular transferências e exclusões sem alterar arquivos"
+        ),
+        "ui.dialog.watch.status_label": "Estado atual:",
+        "ui.dialog.watch.status_idle": "Inativo / Parado",
+        "ui.dialog.watch.status_watching": "Ativo — Observando alterações de arquivos",
+        "ui.dialog.watch.status_syncing": "Sincronizando alterações...",
+        "ui.dialog.watch.events_log": "Registro de eventos e sincronizações",
+        "ui.dialog.watch.clear_log": "Limpar Registro",
+        "ui.dialog.watch.start": "Iniciar Observação",
+        "ui.dialog.watch.stop": "Parar Observação",
+        "ui.dialog.watch.close": "Fechar",
+        "ui.dialog.watch.no_local_folder_warning": (
+            "Aviso: O perfil não possui pasta local acessível no disco."
+        ),
+        "ui.dialog.watch.started_log": "Observação iniciada nas pastas: {folders}",
+        "ui.dialog.watch.stopped_log": "Observação finalizada.",
+        "ui.dialog.watch.change_detected": "Alteração detectada ({type}): {path}",
+        "ui.dialog.watch.sync_queued_busy": (
+            "Sincronização em andamento; nova sincronização agendada para após o término."
+        ),
+        "ui.dialog.watch.sync_starting": (
+            "Tempo de debounce atingido. Iniciando sincronização {mode}..."
+        ),
+        "ui.dialog.watch.sync_finished": (
+            "Sincronização concluída ({status}): {transferred} transferidos, {deleted} excluídos."
+        ),
+        "ui.dialog.watch.sync_error": "Erro na sincronização: {error}",
     },
 }
 

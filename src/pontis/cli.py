@@ -8,7 +8,9 @@ import json
 import re
 import shutil
 import sys
+import time
 from collections.abc import Sequence
+from datetime import datetime
 from pathlib import Path
 
 from pontis.domain.models import (
@@ -32,9 +34,18 @@ from pontis.infra.rclone import (
 from pontis.infra.rclone_adapter import LogEvent, RcloneAdapter
 from pontis.infra.repositories import (
     DuplicateProfileError,
+    ProfileNotFoundError,
     ProfileRepository,
     RunRepository,
 )
+from pontis.services.import_export_service import (
+    ProfileExportError,
+    ProfileImportError,
+    ProfileTransfer,
+    ScriptImporter,
+    ScriptImportError,
+)
+from pontis.services.profile_service import ProfileService
 from pontis.services.remote_service import (
     RemoteAlreadyExistsError,
     RemoteInvalidNameError,
@@ -47,6 +58,7 @@ from pontis.services.run_service import (
     FirstRunDryRunRequiredError,
     RunService,
 )
+from pontis.services.watch_service import WatchService
 
 _REMOTE_RE = re.compile(r"^([A-Za-z0-9_][A-Za-z0-9_.\- ]*):(.*)$")
 
@@ -99,6 +111,24 @@ def build_parser() -> argparse.ArgumentParser:
     psub.add_parser("list", help="List profiles.")
     rem = psub.add_parser("remove", help="Remove a profile (files are never touched).")
     rem.add_argument("name")
+
+    p_export = psub.add_parser("export", help="Export one or all profiles to JSON.")
+    p_export.add_argument("name", nargs="?", help="Profile name or ID (or omit with --all).")
+    p_export.add_argument("--all", action="store_true", help="Export all profiles.")
+    p_export.add_argument("--output", "-o", type=Path, help="File to write JSON to.")
+
+    p_import = psub.add_parser("import", help="Import profiles from a JSON file.")
+    p_import.add_argument("file", type=Path, help="JSON file containing profiles.")
+    p_import.add_argument(
+        "--overwrite", action="store_true", help="Overwrite existing profiles with the same name."
+    )
+    p_import.add_argument(
+        "--rename", action="store_true", help="Rename profiles on conflict (default)."
+    )
+
+    p_script = psub.add_parser("import-script", help="Import a profile from a shell sync script.")
+    p_script.add_argument("script", type=Path, help="Shell script (e.g. sync.sh).")
+    p_script.add_argument("--name", help="Custom name for the imported profile.")
 
     # 2. Remote subcommands
     remote = sub.add_parser("remote", help="Manage cloud remotes.")
@@ -173,6 +203,20 @@ def build_parser() -> argparse.ArgumentParser:
         action="store_true",
         help="Allow the first real run without a prior successful --dry-run.",
     )
+
+    # 4. Watch subcommand
+    watch = sub.add_parser("watch", help="Watch local folders and sync on changes with watchdog.")
+    watch.add_argument("name", help="Profile name or ID to watch.")
+    watch.add_argument(
+        "--debounce", type=float, default=5.0, help="Debounce wait time in seconds (default: 5.0)."
+    )
+    watch.add_argument("--dry-run", action="store_true", help="Run sync in simulation mode.")
+    watch.add_argument("--rclone", help="Path to the rclone binary.")
+    watch.add_argument(
+        "--rclone-config",
+        type=Path,
+        help="rclone.conf to use (default: the app's own rclone.conf).",
+    )
     return parser
 
 
@@ -231,14 +275,76 @@ def _cmd_profile(args: argparse.Namespace, db_path: Path) -> int:
                 print(f"{p.id}\t{p.name}\t{p.side_a.to_rclone()} {arrow} {p.side_b.to_rclone()}")
             return 0
 
-        # remove
-        found = repo.get_by_name(args.name)
-        if found is None or found.id is None:
-            print(tr("profile.not_found", name=args.name), file=sys.stderr)
-            return 1
-        repo.delete(found.id)
-        shutil.rmtree(db_path.parent / "bisync" / str(found.id), ignore_errors=True)
-        print(tr("profile.removed", name=found.name))
+        if args.action == "remove":
+            found = repo.get_by_name(args.name)
+            if found is None or found.id is None:
+                print(tr("profile.not_found", name=args.name), file=sys.stderr)
+                return 1
+            repo.delete(found.id)
+            shutil.rmtree(db_path.parent / "bisync" / str(found.id), ignore_errors=True)
+            print(tr("profile.removed", name=found.name))
+            return 0
+
+        if args.action == "export":
+            profiles_to_export: list[SyncProfile] = []
+            if args.all or not args.name:
+                profiles_to_export = repo.list()
+            else:
+                target_p: SyncProfile | None = None
+                if args.name.isdigit():
+                    try:
+                        target_p = repo.get(int(args.name))
+                    except ProfileNotFoundError:
+                        target_p = None
+                if target_p is None:
+                    target_p = repo.get_by_name(args.name)
+
+                if target_p is None:
+                    print(tr("profile.export_not_found", name=args.name), file=sys.stderr)
+                    return 1
+                profiles_to_export = [target_p]
+
+            if args.output:
+                try:
+                    ProfileTransfer.export_to_file(profiles_to_export, args.output)
+                except ProfileExportError as err:
+                    print(str(err), file=sys.stderr)
+                    return 1
+                print(tr("profile.exported", count=len(profiles_to_export), path=args.output))
+            else:
+                print(ProfileTransfer.export_to_json(profiles_to_export))
+            return 0
+
+        if args.action == "import":
+            try:
+                imported_profiles = ProfileTransfer.import_from_file(args.file)
+            except ProfileImportError as err:
+                print(str(err), file=sys.stderr)
+                return 1
+
+            if not imported_profiles:
+                print(tr("profile.import_none"))
+                return 0
+
+            policy = "overwrite" if args.overwrite else "rename"
+            service = ProfileService(conn=conn)
+            saved = service.import_profiles(imported_profiles, on_conflict=policy)
+            names = ", ".join(p.name for p in saved)
+            print(tr("profile.imported_count", count=len(saved), names=names))
+            return 0
+
+        if args.action == "import-script":
+            try:
+                imported_p = ScriptImporter.parse_file(args.script, default_name=args.name)
+            except ScriptImportError as err:
+                print(tr("script.import_failed", error=err), file=sys.stderr)
+                return 1
+
+            service = ProfileService(conn=conn)
+            saved_p = service.import_profile(imported_p, on_conflict="rename")
+            print(tr("script.imported", name=saved_p.name, path=args.script))
+            return 0
+
         return 0
     finally:
         conn.close()
@@ -468,6 +574,113 @@ def _cmd_run(args: argparse.Namespace, db_path: Path) -> int:
         conn.close()
 
 
+def _cmd_watch(args: argparse.Namespace, db_path: Path) -> int:
+    try:
+        info = locate_rclone(args.rclone)
+    except RcloneNotFoundError:
+        print(tr("rclone.not_found"), file=sys.stderr)
+        return 3
+    except RcloneTooOldError as exc:
+        print(
+            tr(
+                "rclone.too_old",
+                found=format_version(exc.found),
+                minimum=format_version(exc.minimum),
+            ),
+            file=sys.stderr,
+        )
+        return 3
+
+    config_path: Path = args.rclone_config or (config_dir() / "rclone.conf")
+    if not config_path.is_file():
+        print(tr("rclone.config_missing", path=config_path), file=sys.stderr)
+        return 3
+
+    conn = connect(db_path)
+    try:
+        repo = ProfileRepository(conn)
+        target_p: SyncProfile | None = None
+        if args.name.isdigit():
+            try:
+                target_p = repo.get(int(args.name))
+            except ProfileNotFoundError:
+                target_p = None
+        if target_p is None:
+            target_p = repo.get_by_name(args.name)
+
+        if target_p is None:
+            print(tr("profile.not_found", name=args.name), file=sys.stderr)
+            return 1
+
+        keyring_store = KeyringStore()
+        cfg_pass = keyring_store.get_password()
+        env = {"RCLONE_CONFIG_PASS": cfg_pass} if cfg_pass else None
+
+        adapter = RcloneAdapter(info.path, db_path.parent / "bisync", config_path, env=env)
+        service = RunService(adapter, RunRepository(conn), db_path.parent / "locks")
+
+        watch_service = WatchService()
+        try:
+            watchable = WatchService.get_watchable_paths(target_p)
+            if not watchable:
+                print(tr("watch.no_local", name=target_p.name), file=sys.stderr)
+                return 1
+
+            def _on_change(etype: str, fpath: str) -> None:
+                t = datetime.now().strftime("%H:%M:%S")
+                print(tr("watch.file_changed", time=t, type=etype, path=fpath))
+
+            def _on_sync(p: SyncProfile) -> None:
+                t = datetime.now().strftime("%H:%M:%S")
+                print(tr("watch.triggering_sync", time=t))
+                try:
+                    res = service.run(
+                        p,
+                        dry_run=args.dry_run,
+                        require_dry_run_first=False,
+                        on_event=_print_event,
+                    )
+                    t_end = datetime.now().strftime("%H:%M:%S")
+                    print(
+                        tr(
+                            "watch.sync_finished",
+                            time=t_end,
+                            transferred=res.files_transferred,
+                            deleted=res.files_deleted,
+                            errors=res.errors,
+                        )
+                    )
+                except Exception as err:
+                    print(f"  ! Sync error: {err}", file=sys.stderr)
+
+            paths_str = ", ".join(str(p) for p in watchable)
+            print(
+                tr(
+                    "watch.starting",
+                    name=target_p.name,
+                    paths=paths_str,
+                    debounce=args.debounce,
+                )
+            )
+            watch_service.start_watching(
+                target_p,
+                debounce_seconds=args.debounce,
+                on_change=_on_change,
+                on_sync_triggered=_on_sync,
+            )
+
+            try:
+                while True:
+                    time.sleep(1.0)
+            except KeyboardInterrupt:
+                print(f"\n{tr('watch.stopped')}")
+                return 0
+        finally:
+            watch_service.stop_all()
+    finally:
+        conn.close()
+
+
 def main(argv: Sequence[str] | None = None) -> int:
     """Run the CLI and return the process exit code."""
     parser = build_parser()
@@ -481,6 +694,8 @@ def main(argv: Sequence[str] | None = None) -> int:
     db_path.parent.mkdir(parents=True, exist_ok=True)
     if args.command == "profile":
         return _cmd_profile(args, db_path)
+    if args.command == "watch":
+        return _cmd_watch(args, db_path)
     return _cmd_run(args, db_path)
 
 

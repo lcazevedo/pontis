@@ -80,6 +80,45 @@ class ProfileService:
         """Delete a profile and its associated run records."""
         self._profile_repo.delete(profile_id)
 
+    def import_profile(
+        self,
+        profile: SyncProfile,
+        *,
+        on_conflict: str = "rename",
+    ) -> SyncProfile:
+        """Import a profile handling name collisions ('rename', 'overwrite', or 'raise')."""
+        existing = self.get_profile_by_name(profile.name)
+        if existing is None:
+            return self.add_profile(profile)
+
+        if on_conflict == "raise":
+            return self.add_profile(profile)
+
+        if on_conflict == "overwrite":
+            profile.id = existing.id
+            return self.update_profile(profile)
+
+        if on_conflict == "rename":
+            idx = 1
+            base_name = profile.name
+            while True:
+                candidate = f"{base_name} ({idx})"
+                if self.get_profile_by_name(candidate) is None:
+                    profile.name = candidate
+                    return self.add_profile(profile)
+                idx += 1
+
+        raise ValueError(f"Unknown on_conflict policy: '{on_conflict}'")
+
+    def import_profiles(
+        self,
+        profiles: list[SyncProfile],
+        *,
+        on_conflict: str = "rename",
+    ) -> list[SyncProfile]:
+        """Import multiple profiles handling name collisions."""
+        return [self.import_profile(p, on_conflict=on_conflict) for p in profiles]
+
     def list_runs(self, profile_id: int | None = None, limit: int | None = None) -> list[RunResult]:
         """Return runs for a profile or across all profiles if profile_id is None."""
         if profile_id is not None:

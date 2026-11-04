@@ -3,6 +3,7 @@
 
 from __future__ import annotations
 
+import contextlib
 import re
 import shlex
 from typing import TYPE_CHECKING
@@ -558,7 +559,12 @@ class AdvancedOptionsDialog(QDialog):
                 clipboard.setText(text)
             orig_text = tr("ui.advanced.preview.btn_copy")
             self._btn_copy.setText(tr("ui.advanced.preview.copied"))
-            QTimer.singleShot(2000, lambda: self._btn_copy.setText(orig_text))
+
+            def _reset_copy_btn() -> None:
+                with contextlib.suppress(RuntimeError):
+                    self._btn_copy.setText(orig_text)
+
+            QTimer.singleShot(2000, _reset_copy_btn)
 
     def _on_reset_defaults(self) -> None:
         reply = QMessageBox.question(
