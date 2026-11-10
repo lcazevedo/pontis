@@ -186,6 +186,9 @@ class EndpointPickerWidget(QWidget):
             idx = self._remote_combo.findData(endpoint.remote)
             if idx >= 0:
                 self._remote_combo.setCurrentIndex(idx)
+            elif endpoint.remote:
+                self._remote_combo.addItem(endpoint.remote, endpoint.remote)
+                self._remote_combo.setCurrentIndex(self._remote_combo.count() - 1)
             self._edit_remote_path.setText(endpoint.path)
         self._update_visibility()
 

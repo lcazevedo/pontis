@@ -791,6 +791,14 @@ class MainWindow(QMainWindow):
             )
             return
 
+        # If a profile with the same name already exists, suggest a unique candidate
+        if self._service.get_profile_by_name(imported_profile.name) is not None:
+            base_name = imported_profile.name
+            idx = 1
+            while self._service.get_profile_by_name(f"{base_name} ({idx})") is not None:
+                idx += 1
+            imported_profile.name = f"{base_name} ({idx})"
+
         # Open wizard pre-filled with the imported profile for review and saving
         wizard = ProfileWizard(
             service=self._service,

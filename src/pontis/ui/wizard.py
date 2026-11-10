@@ -506,7 +506,7 @@ class ProfileWizard(QWizard):
         self.saved_profile: SyncProfile | None = None
         self.custom_options: SyncOptions = profile.options if profile is not None else SyncOptions()
 
-        if profile is not None:
+        if profile is not None and profile.id is not None:
             self.setWindowTitle(tr("ui.wizard.title_edit", name=profile.name))
         else:
             self.setWindowTitle(tr("ui.wizard.title_new"))
@@ -568,7 +568,7 @@ class ProfileWizard(QWizard):
         opts_data["conflict_policy"] = conflict.value
         final_options = SyncOptions.from_dict(opts_data)
 
-        if self._profile is not None:
+        if self._profile is not None and self._profile.id is not None:
             # Edit mode: update existing options and fields
             self._profile.name = name
             self._profile.side_a = side_a

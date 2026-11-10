@@ -14,6 +14,7 @@ from pontis.services.run_service import RunService
 from pontis.services.watch_service import WatchService
 from pontis.ui.main_window import MainWindow
 from pontis.ui.watch_dialog import WatchDialog
+from pontis.ui.wizard import ProfileWizard
 
 os.environ["QT_QPA_PLATFORM"] = "offscreen"
 
@@ -110,3 +111,40 @@ def test_main_window_part9_actions(qtbot: object, tmp_path: Path) -> None:
     assert win._action_export_profile.isEnabled()
 
     win.close()
+
+
+def test_wizard_with_unpersisted_imported_profile(qtbot: object, tmp_path: Path) -> None:
+    """Test that ProfileWizard handles an imported profile with id=None without error."""
+    db_path = tmp_path / "imported_wizard.db"
+    service = ProfileService(db_path=db_path)
+    remote_service = MagicMock(spec=RemoteService)
+
+    # Unpersisted profile (as produced by ScriptImporter)
+    imported = SyncProfile(
+        name="ImportedSENAI",
+        side_a=Endpoint.local(str(tmp_path)),
+        side_b=Endpoint.cloud("gdrive", "SENAI"),
+        id=None,
+    )
+
+    wizard = ProfileWizard(
+        service=service,
+        remote_service=remote_service,
+        profile=imported,
+    )
+    wizard.show()
+
+    # Calling accept should save via add_profile (not update_profile)
+    wizard.accept()
+
+    assert wizard.saved_profile is not None
+    assert wizard.saved_profile.id is not None
+    assert wizard.saved_profile.name == "ImportedSENAI"
+    assert wizard.saved_profile.side_b.remote == "gdrive"
+
+    # Profile exists in the database
+    persisted = service.get_profile(wizard.saved_profile.id)
+    assert persisted is not None
+    assert persisted.name == "ImportedSENAI"
+
+    wizard.close()
