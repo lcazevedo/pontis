@@ -5,7 +5,7 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING
 
-from PySide6.QtCore import QPoint, Qt
+from PySide6.QtCore import QPoint, Qt, QTimer
 from PySide6.QtGui import QAction, QActionGroup, QCloseEvent, QKeySequence
 from PySide6.QtWidgets import (
     QAbstractItemView,
@@ -23,24 +23,29 @@ from PySide6.QtWidgets import (
 )
 
 from pontis.domain.models import RunResult, RunStatus, SyncDirection, SyncProfile
-from pontis.i18n import tr
+from pontis.i18n import register_language_listener, tr, unregister_language_listener
 from pontis.infra.database import connect
 from pontis.infra.keyring_store import KEY_RCLONE_CONFIG_PASS, KeyringStore
 from pontis.infra.paths import config_dir, default_db_path
 from pontis.infra.rclone import locate_rclone
 from pontis.infra.rclone_adapter import RcloneAdapter
 from pontis.infra.repositories import RunRepository
+from pontis.infra.settings import AppSettings, SettingsManager, get_settings_manager
 from pontis.services.import_export_service import ProfileTransfer, ScriptImporter
 from pontis.services.profile_service import ProfileService, ProfileSummary
 from pontis.services.remote_service import RemoteService
 from pontis.services.run_service import RunService
+from pontis.services.update_service import UpdateCheckWorker, UpdateInfo
+from pontis.ui.about_dialog import AboutDialog
 from pontis.ui.advanced_options_dialog import AdvancedOptionsDialog
 from pontis.ui.conflict_resolution_dialog import ConflictResolutionDialog
 from pontis.ui.dry_run_summary_dialog import DryRunSummaryDialog
 from pontis.ui.history_dialog import HistoryDialog
 from pontis.ui.icons import get_icon
+from pontis.ui.preferences_dialog import PreferencesDialog
 from pontis.ui.sync_progress_dialog import SyncProgressDialog
 from pontis.ui.theme import ThemeMode, apply_theme
+from pontis.ui.update_dialog import UpdateDialog
 from pontis.ui.watch_dialog import WatchDialog
 from pontis.ui.widgets.empty_state import EmptyStateWidget
 from pontis.ui.wizard import ProfileWizard
@@ -60,13 +65,22 @@ class MainWindow(QMainWindow):
         db_path: Path | None = None,
         rclone_binary: Path | str | None = None,
         rclone_config: Path | None = None,
+        settings_manager: SettingsManager | None = None,
+        check_updates_on_startup: bool = False,
         parent: QWidget | None = None,
     ) -> None:
         super().__init__(parent)
+        self._settings_manager = settings_manager or get_settings_manager()
+        self._settings: AppSettings = self._settings_manager.load()
+        self._startup_worker: UpdateCheckWorker | None = None
+        self._update_worker: UpdateCheckWorker | None = None
+
         self._service = service if service is not None else ProfileService(db_path=db_path)
         self._rclone_config = rclone_config or (config_dir() / "rclone.conf")
         if rclone_binary is not None:
             self._rclone_binary: Path | str = rclone_binary
+        elif self._settings.rclone_path:
+            self._rclone_binary = self._settings.rclone_path
         else:
             try:
                 self._rclone_binary = locate_rclone().path
@@ -105,7 +119,10 @@ class MainWindow(QMainWindow):
 
         self._running_profile_ids: set[int] = set()
         self._summaries: list[ProfileSummary] = []
-        self._current_theme: ThemeMode = ThemeMode.SYSTEM
+        try:
+            self._current_theme = ThemeMode(self._settings.theme)
+        except ValueError:
+            self._current_theme = ThemeMode.SYSTEM
 
         self.setWindowTitle(tr("ui.main.title"))
         self.resize(950, 560)
@@ -113,6 +130,10 @@ class MainWindow(QMainWindow):
 
         self._init_ui()
         self.load_profiles()
+        register_language_listener(self.retranslate_ui)
+
+        if check_updates_on_startup:
+            QTimer.singleShot(1000, self._check_updates_startup)
 
     def _init_ui(self) -> None:
         """Construct actions, toolbar, stacked widget, and status bar."""
@@ -207,6 +228,24 @@ class MainWindow(QMainWindow):
         self._action_import_script.setToolTip(tr("ui.actions.import_script.tooltip"))
         self._action_import_script.triggered.connect(self._on_import_script)
 
+        self._action_preferences = QAction(
+            get_icon("preferences-system"), tr("ui.actions.preferences"), self
+        )
+        self._action_preferences.setToolTip(tr("ui.actions.preferences.tooltip"))
+        self._action_preferences.setShortcut(QKeySequence("Ctrl+,"))
+        self._action_preferences.triggered.connect(self._on_preferences)
+
+        self._action_check_updates = QAction(
+            get_icon("system-software-update"), tr("ui.actions.check_updates"), self
+        )
+        self._action_check_updates.setToolTip(tr("ui.actions.check_updates.tooltip"))
+        self._action_check_updates.triggered.connect(self._on_check_updates)
+
+        self._action_about = QAction(get_icon("help-about"), tr("ui.actions.about"), self)
+        self._action_about.setToolTip(tr("ui.actions.about.tooltip"))
+        self._action_about.setShortcut(QKeySequence("F1"))
+        self._action_about.triggered.connect(self._on_about)
+
         self._action_quit = QAction(tr("ui.actions.quit"), self)
         self._action_quit.setToolTip(tr("ui.actions.quit.tooltip"))
         self._action_quit.setShortcut(QKeySequence("Ctrl+Q"))
@@ -230,6 +269,8 @@ class MainWindow(QMainWindow):
         toolbar.addAction(self._action_delete)
         toolbar.addAction(self._action_refresh)
         toolbar.addSeparator()
+        toolbar.addAction(self._action_preferences)
+        toolbar.addSeparator()
 
         # Theme selector button
         self._theme_button = QToolButton(self)
@@ -252,7 +293,10 @@ class MainWindow(QMainWindow):
             get_icon("weather-clear-night"), tr("ui.actions.theme.dark"), self, checkable=True
         )
 
-        self._theme_system_action.setChecked(True)
+        self._theme_system_action.setChecked(self._current_theme == ThemeMode.SYSTEM)
+        self._theme_light_action.setChecked(self._current_theme == ThemeMode.LIGHT)
+        self._theme_dark_action.setChecked(self._current_theme == ThemeMode.DARK)
+
         theme_group.addAction(self._theme_system_action)
         theme_group.addAction(self._theme_light_action)
         theme_group.addAction(self._theme_dark_action)
@@ -273,38 +317,52 @@ class MainWindow(QMainWindow):
         """Create the top menu bar."""
         menubar = self.menuBar()
 
-        file_menu = menubar.addMenu(tr("ui.menu.file"))
-        file_menu.addAction(self._action_new)
-        file_menu.addSeparator()
-        file_menu.addAction(self._action_import_profile)
-        file_menu.addAction(self._action_import_script)
-        file_menu.addAction(self._action_export_profile)
-        file_menu.addSeparator()
-        file_menu.addAction(self._action_quit)
+        self._menu_file = menubar.addMenu(tr("ui.menu.file"))
+        self._menu_file.addAction(self._action_new)
+        self._menu_file.addSeparator()
+        self._menu_file.addAction(self._action_import_profile)
+        self._menu_file.addAction(self._action_import_script)
+        self._menu_file.addAction(self._action_export_profile)
+        self._menu_file.addSeparator()
+        self._menu_file.addAction(self._action_preferences)
+        self._menu_file.addSeparator()
+        self._menu_file.addAction(self._action_quit)
 
-        profile_menu = menubar.addMenu(tr("ui.menu.profile"))
-        profile_menu.addAction(self._action_sync)
-        profile_menu.addAction(self._action_dry_run)
-        profile_menu.addAction(self._action_watch)
-        profile_menu.addSeparator()
-        profile_menu.addAction(self._action_new)
-        profile_menu.addAction(self._action_edit)
-        profile_menu.addAction(self._action_advanced)
-        profile_menu.addAction(self._action_conflicts)
-        profile_menu.addAction(self._action_history)
-        profile_menu.addSeparator()
-        profile_menu.addAction(self._action_import_profile)
-        profile_menu.addAction(self._action_import_script)
-        profile_menu.addAction(self._action_export_profile)
-        profile_menu.addSeparator()
-        profile_menu.addAction(self._action_delete)
-        profile_menu.addAction(self._action_refresh)
+        self._menu_edit = menubar.addMenu(tr("ui.menu.edit"))
+        self._menu_edit.addAction(self._action_edit)
+        self._menu_edit.addAction(self._action_advanced)
+        self._menu_edit.addAction(self._action_conflicts)
+        self._menu_edit.addSeparator()
+        self._menu_edit.addAction(self._action_preferences)
 
-        view_menu = menubar.addMenu(tr("ui.menu.view"))
-        theme_submenu = view_menu.addMenu(tr("ui.actions.theme"))
-        theme_submenu.addAction(self._theme_system_action)
-        theme_submenu.addAction(self._theme_light_action)
-        theme_submenu.addAction(self._theme_dark_action)
+        self._menu_profile = menubar.addMenu(tr("ui.menu.profile"))
+        self._menu_profile.addAction(self._action_sync)
+        self._menu_profile.addAction(self._action_dry_run)
+        self._menu_profile.addAction(self._action_watch)
+        self._menu_profile.addSeparator()
+        self._menu_profile.addAction(self._action_new)
+        self._menu_profile.addAction(self._action_edit)
+        self._menu_profile.addAction(self._action_advanced)
+        self._menu_profile.addAction(self._action_conflicts)
+        self._menu_profile.addAction(self._action_history)
+        self._menu_profile.addSeparator()
+        self._menu_profile.addAction(self._action_import_profile)
+        self._menu_profile.addAction(self._action_import_script)
+        self._menu_profile.addAction(self._action_export_profile)
+        self._menu_profile.addSeparator()
+        self._menu_profile.addAction(self._action_delete)
+        self._menu_profile.addAction(self._action_refresh)
+
+        self._menu_view = menubar.addMenu(tr("ui.menu.view"))
+        self._theme_submenu = self._menu_view.addMenu(tr("ui.actions.theme"))
+        self._theme_submenu.addAction(self._theme_system_action)
+        self._theme_submenu.addAction(self._theme_light_action)
+        self._theme_submenu.addAction(self._theme_dark_action)
+
+        self._menu_help = menubar.addMenu(tr("ui.menu.help"))
+        self._menu_help.addAction(self._action_check_updates)
+        self._menu_help.addSeparator()
+        self._menu_help.addAction(self._action_about)
 
     def _create_central_widget(self) -> None:
         """Create the stacked widget holding the table and empty state."""
@@ -329,6 +387,8 @@ class MainWindow(QMainWindow):
         self._table.setAlternatingRowColors(True)
         self._table.setShowGrid(False)
         self._table.verticalHeader().setVisible(False)
+        self._table.setAccessibleName(tr("ui.table.header.name"))
+        self._table.setAccessibleDescription(tr("ui.main.title"))
 
         header = self._table.horizontalHeader()
         header.setSectionResizeMode(0, QHeaderView.ResizeMode.Interactive)
@@ -711,6 +771,153 @@ class MainWindow(QMainWindow):
         """Switch between Light, Dark, and System appearance."""
         self._current_theme = mode
         apply_theme(self, mode)
+        self._settings.theme = str(mode.value)
+        self._settings_manager.save(self._settings)
+
+    def _on_preferences(self) -> None:
+        """Open Preferences dialog."""
+        dlg = PreferencesDialog(parent=self, settings_manager=self._settings_manager)
+        dlg.settings_applied.connect(self._on_settings_applied)
+        if dlg.exec():
+            self._on_settings_applied(dlg.apply_settings())
+
+    def _on_settings_applied(self, settings: AppSettings) -> None:
+        """React to applied settings updates."""
+        self._settings = settings
+        if settings.rclone_path:
+            self._rclone_binary = settings.rclone_path
+        try:
+            theme_mode = ThemeMode(settings.theme)
+            self._current_theme = theme_mode
+            apply_theme(self, theme_mode)
+            self._theme_system_action.setChecked(theme_mode == ThemeMode.SYSTEM)
+            self._theme_light_action.setChecked(theme_mode == ThemeMode.LIGHT)
+            self._theme_dark_action.setChecked(theme_mode == ThemeMode.DARK)
+        except ValueError:
+            pass
+
+    def _on_about(self) -> None:
+        """Open About dialog."""
+        dlg = AboutDialog(rclone_binary=self._rclone_binary, parent=self)
+        dlg.exec()
+
+    def _on_check_updates(self) -> None:
+        """Trigger an update check and display results."""
+        self.statusBar().showMessage(tr("ui.dialog.preferences.checking"))
+        worker = UpdateCheckWorker()
+        self._update_worker = worker
+
+        def on_success(info: UpdateInfo) -> None:
+            self.statusBar().showMessage(tr("ui.statusbar.ready"))
+            dlg = UpdateDialog(info, parent=self)
+            dlg.exec()
+            if dlg.ignore_requested and info.has_update:
+                self._settings.ignored_update_version = info.latest_version
+                self._settings_manager.save(self._settings)
+
+        def on_error(msg: str) -> None:
+            self.statusBar().showMessage(tr("ui.statusbar.ready"))
+            QMessageBox.warning(
+                self,
+                tr("ui.actions.check_updates"),
+                f"{tr('ui.dialog.preferences.checking')}\n{msg}",
+            )
+
+        worker.finished_success.connect(on_success)
+        worker.finished_error.connect(on_error)
+        worker.start()
+
+    def _check_updates_startup(self) -> None:
+        """Quiet background update check on app launch."""
+        if not self._settings.check_updates_on_startup:
+            return
+
+        worker = UpdateCheckWorker()
+        self._startup_worker = worker
+
+        def on_success(info: UpdateInfo) -> None:
+            if info.has_update and info.latest_version != self._settings.ignored_update_version:
+                dlg = UpdateDialog(info, parent=self)
+                dlg.exec()
+                if dlg.ignore_requested:
+                    self._settings.ignored_update_version = info.latest_version
+                    self._settings_manager.save(self._settings)
+
+        worker.finished_success.connect(on_success)
+        worker.start()
+
+    def retranslate_ui(self) -> None:
+        """Update all user interface texts dynamically when language changes."""
+        self.setWindowTitle(tr("ui.main.title"))
+
+        # Menus
+        self._menu_file.setTitle(tr("ui.menu.file"))
+        self._menu_edit.setTitle(tr("ui.menu.edit"))
+        self._menu_profile.setTitle(tr("ui.menu.profile"))
+        self._menu_view.setTitle(tr("ui.menu.view"))
+        self._menu_help.setTitle(tr("ui.menu.help"))
+        self._theme_submenu.setTitle(tr("ui.actions.theme"))
+
+        # Actions
+        self._action_sync.setText(tr("ui.actions.sync_now"))
+        self._action_sync.setToolTip(tr("ui.actions.sync_now.tooltip"))
+        self._action_dry_run.setText(tr("ui.actions.dry_run"))
+        self._action_dry_run.setToolTip(tr("ui.actions.dry_run.tooltip"))
+        self._action_watch.setText(tr("ui.actions.watch"))
+        self._action_watch.setToolTip(tr("ui.actions.watch.tooltip"))
+        self._action_new.setText(tr("ui.actions.new"))
+        self._action_new.setToolTip(tr("ui.actions.new.tooltip"))
+        self._action_edit.setText(tr("ui.actions.edit"))
+        self._action_edit.setToolTip(tr("ui.actions.edit.tooltip"))
+        self._action_advanced.setText(tr("ui.actions.advanced_options"))
+        self._action_advanced.setToolTip(tr("ui.actions.advanced_options.tooltip"))
+        self._action_conflicts.setText(tr("ui.actions.conflicts"))
+        self._action_conflicts.setToolTip(tr("ui.actions.conflicts.tooltip"))
+        self._action_history.setText(tr("ui.actions.history"))
+        self._action_history.setToolTip(tr("ui.actions.history.tooltip"))
+        self._action_delete.setText(tr("ui.actions.delete"))
+        self._action_delete.setToolTip(tr("ui.actions.delete.tooltip"))
+        self._action_refresh.setText(tr("ui.actions.refresh"))
+        self._action_refresh.setToolTip(tr("ui.actions.refresh.tooltip"))
+        self._action_import_profile.setText(tr("ui.actions.import_profile"))
+        self._action_import_profile.setToolTip(tr("ui.actions.import_profile.tooltip"))
+        self._action_export_profile.setText(tr("ui.actions.export_profile"))
+        self._action_export_profile.setToolTip(tr("ui.actions.export_profile.tooltip"))
+        self._action_import_script.setText(tr("ui.actions.import_script"))
+        self._action_import_script.setToolTip(tr("ui.actions.import_script.tooltip"))
+        self._action_preferences.setText(tr("ui.actions.preferences"))
+        self._action_preferences.setToolTip(tr("ui.actions.preferences.tooltip"))
+        self._action_check_updates.setText(tr("ui.actions.check_updates"))
+        self._action_check_updates.setToolTip(tr("ui.actions.check_updates.tooltip"))
+        self._action_about.setText(tr("ui.actions.about"))
+        self._action_about.setToolTip(tr("ui.actions.about.tooltip"))
+        self._action_quit.setText(tr("ui.actions.quit"))
+        self._action_quit.setToolTip(tr("ui.actions.quit.tooltip"))
+
+        # Theme actions
+        self._theme_button.setText(tr("ui.actions.theme"))
+        self._theme_system_action.setText(tr("ui.actions.theme.system"))
+        self._theme_light_action.setText(tr("ui.actions.theme.light"))
+        self._theme_dark_action.setText(tr("ui.actions.theme.dark"))
+
+        # Table headers and accessibility
+        self._table.setHorizontalHeaderLabels(
+            [
+                tr("ui.table.header.name"),
+                tr("ui.table.header.source"),
+                tr("ui.table.header.direction"),
+                tr("ui.table.header.destination"),
+                tr("ui.table.header.last_run"),
+                tr("ui.table.header.status"),
+            ]
+        )
+        self._table.setAccessibleName(tr("ui.table.header.name"))
+        self._table.setAccessibleDescription(tr("ui.main.title"))
+
+        # Empty state & status bar
+        self._empty_state.retranslate_ui()
+        self.statusBar().showMessage(tr("ui.statusbar.ready"))
+        self.load_profiles()
 
     def _on_import_profile(self) -> None:
         """Import profiles from a JSON file."""
@@ -828,6 +1035,15 @@ class MainWindow(QMainWindow):
 
     def closeEvent(self, event: QCloseEvent) -> None:
         """Clean up resources on window close."""
+        unregister_language_listener(self.retranslate_ui)
+        if self._startup_worker is not None and self._startup_worker.isRunning():
+            self._startup_worker.requestInterruption()
+            self._startup_worker.quit()
+            self._startup_worker.wait(500)
+        if self._update_worker is not None and self._update_worker.isRunning():
+            self._update_worker.requestInterruption()
+            self._update_worker.quit()
+            self._update_worker.wait(500)
         if self._run_conn is not None:
             self._run_conn.close()
         self._service.close()

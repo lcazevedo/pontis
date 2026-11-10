@@ -7,7 +7,9 @@ the call site.
 
 from __future__ import annotations
 
+import contextlib
 import os
+from collections.abc import Callable
 
 DEFAULT_LANGUAGE = "en"
 _OVERRIDE_LANG: str | None = None
@@ -81,6 +83,7 @@ _CATALOG: dict[str, dict[str, str]] = {
         "ui.app.name": "Pontis",
         "ui.main.title": "Pontis — Two-Way File Sync",
         "ui.menu.file": "File",
+        "ui.menu.edit": "Edit",
         "ui.menu.profile": "Profile",
         "ui.menu.view": "View",
         "ui.menu.help": "Help",
@@ -89,6 +92,12 @@ _CATALOG: dict[str, dict[str, str]] = {
         "ui.actions.new.tooltip": "Create a new sync profile",
         "ui.actions.edit": "Edit",
         "ui.actions.edit.tooltip": "Edit the selected sync profile",
+        "ui.actions.preferences": "Preferences...",
+        "ui.actions.preferences.tooltip": "Configure application settings (Ctrl+,)",
+        "ui.actions.check_updates": "Check for Updates...",
+        "ui.actions.check_updates.tooltip": "Check if a newer version of Pontis is available",
+        "ui.actions.about": "About Pontis",
+        "ui.actions.about.tooltip": "View version, license, and system details (F1)",
         "ui.actions.history": "History",
         "ui.actions.history.tooltip": "View execution history and logs (Ctrl+H)",
         "ui.actions.conflicts": "Conflicts",
@@ -566,6 +575,70 @@ _CATALOG: dict[str, dict[str, str]] = {
             "Sync complete ({status}): {transferred} transferred, {deleted} deleted."
         ),
         "ui.dialog.watch.sync_error": "Sync error: {error}",
+        # Preferences Dialog
+        "ui.dialog.preferences.title": "Preferences",
+        "ui.dialog.preferences.tab_general": "General",
+        "ui.dialog.preferences.tab_rclone": "Rclone Engine",
+        "ui.dialog.preferences.tab_updates": "Updates",
+        "ui.dialog.preferences.group_language": "Language",
+        "ui.dialog.preferences.language_label": "Application language:",
+        "ui.dialog.preferences.lang_pt_br": "Português (Brasil)",
+        "ui.dialog.preferences.lang_en": "English",
+        "ui.dialog.preferences.group_theme": "Appearance & Contrast",
+        "ui.dialog.preferences.theme_label": "Color theme:",
+        "ui.dialog.preferences.accessibility_hint": (
+            "High-contrast colors and full keyboard navigation are supported across all themes."
+        ),
+        "ui.dialog.preferences.group_rclone": "Rclone Executable Path",
+        "ui.dialog.preferences.rclone_label": (
+            "Binary location (leave empty for automatic detection):"
+        ),
+        "ui.dialog.preferences.rclone_browse": "Browse...",
+        "ui.dialog.preferences.rclone_autodetect": "Auto-detect",
+        "ui.dialog.preferences.rclone_test": "Test Rclone",
+        "ui.dialog.preferences.rclone_status_valid": (
+            "Valid rclone {version} found ({source}): {path}"
+        ),
+        "ui.dialog.preferences.rclone_status_invalid": "Invalid rclone executable: {error}",
+        "ui.dialog.preferences.group_updates": "Release Notifications",
+        "ui.dialog.preferences.check_startup": ("Automatically check for new releases on startup"),
+        "ui.dialog.preferences.check_now": "Check for Updates Now",
+        "ui.dialog.preferences.checking": "Checking for updates...",
+        "ui.dialog.preferences.last_check": "Last checked: {time}",
+        "ui.dialog.preferences.never_checked": "Never",
+        "ui.dialog.preferences.save": "Save",
+        "ui.dialog.preferences.cancel": "Cancel",
+        "ui.dialog.preferences.apply": "Apply",
+        # Update Dialog
+        "ui.dialog.update.title_update": "Update Available",
+        "ui.dialog.update.title_latest": "Pontis is Up to Date",
+        "ui.dialog.update.available_header": "A new version of Pontis is available!",
+        "ui.dialog.update.latest_header": "You are using the latest version",
+        "ui.dialog.update.versions_compare": (
+            "Version {latest} is available (currently running {current})."
+        ),
+        "ui.dialog.update.latest_desc": (
+            "Pontis v{current} is currently the newest available release."
+        ),
+        "ui.dialog.update.published_date": "Published on: {date}",
+        "ui.dialog.update.notes_title": "Release Notes:",
+        "ui.dialog.update.ignore_version": "Do not notify me again for version {version}",
+        "ui.dialog.update.open_download": "Download Page...",
+        "ui.dialog.update.later": "Later",
+        "ui.dialog.update.ok": "OK",
+        # About Dialog
+        "ui.dialog.about.title": "About Pontis",
+        "ui.dialog.about.description": (
+            "Bidirectional folder synchronization with cloud storage providers, powered by rclone."
+        ),
+        "ui.dialog.about.rclone_detecting": "Detecting rclone installation...",
+        "ui.dialog.about.rclone_not_found": "rclone binary not detected on system",
+        "ui.dialog.about.license_info": (
+            "Licensed under the GNU General Public License v3.0 or later (GPL-3.0-or-later)."
+        ),
+        "ui.dialog.about.author_info": "Created by Luis Cesar Azevedo",
+        "ui.dialog.about.github_button": "GitHub Repository",
+        "ui.dialog.about.close": "Close",
     },
     "pt_BR": {
         # Profile CLI messages
@@ -641,6 +714,7 @@ _CATALOG: dict[str, dict[str, str]] = {
         "ui.app.name": "Pontis",
         "ui.main.title": "Pontis — Sincronização Bidirecional de Arquivos",
         "ui.menu.file": "Arquivo",
+        "ui.menu.edit": "Editar",
         "ui.menu.profile": "Perfil",
         "ui.menu.view": "Exibir",
         "ui.menu.help": "Ajuda",
@@ -649,6 +723,12 @@ _CATALOG: dict[str, dict[str, str]] = {
         "ui.actions.new.tooltip": "Criar um novo perfil de sincronização",
         "ui.actions.edit": "Editar",
         "ui.actions.edit.tooltip": "Editar o perfil de sincronização selecionado",
+        "ui.actions.preferences": "Preferências...",
+        "ui.actions.preferences.tooltip": "Configurar preferências da aplicação (Ctrl+,)",
+        "ui.actions.check_updates": "Verificar Atualizações...",
+        "ui.actions.check_updates.tooltip": "Verificar se há uma nova versão do Pontis disponível",
+        "ui.actions.about": "Sobre o Pontis",
+        "ui.actions.about.tooltip": "Ver informações de versão, licença e sistema (F1)",
         "ui.actions.history": "Histórico",
         "ui.actions.history.tooltip": "Ver histórico e logs de execuções (Ctrl+H)",
         "ui.actions.conflicts": "Conflitos",
@@ -1158,14 +1238,104 @@ _CATALOG: dict[str, dict[str, str]] = {
             "Sincronização concluída ({status}): {transferred} transferidos, {deleted} excluídos."
         ),
         "ui.dialog.watch.sync_error": "Erro na sincronização: {error}",
+        # Preferences Dialog
+        "ui.dialog.preferences.title": "Preferências",
+        "ui.dialog.preferences.tab_general": "Geral",
+        "ui.dialog.preferences.tab_rclone": "Motor Rclone",
+        "ui.dialog.preferences.tab_updates": "Atualizações",
+        "ui.dialog.preferences.group_language": "Idioma",
+        "ui.dialog.preferences.language_label": "Idioma da aplicação:",
+        "ui.dialog.preferences.lang_pt_br": "Português (Brasil)",
+        "ui.dialog.preferences.lang_en": "English",
+        "ui.dialog.preferences.group_theme": "Aparência e Contraste",
+        "ui.dialog.preferences.theme_label": "Tema visual:",
+        "ui.dialog.preferences.accessibility_hint": (
+            "Cores de alto contraste e navegação completa por teclado "
+            "são suportadas em todos os temas."
+        ),
+        "ui.dialog.preferences.group_rclone": "Caminho do Executável do Rclone",
+        "ui.dialog.preferences.rclone_label": (
+            "Localização do binário (deixe em branco para detecção automática):"
+        ),
+        "ui.dialog.preferences.rclone_browse": "Procurar...",
+        "ui.dialog.preferences.rclone_autodetect": "Auto-detectar",
+        "ui.dialog.preferences.rclone_test": "Testar Rclone",
+        "ui.dialog.preferences.rclone_status_valid": (
+            "Rclone {version} válido encontrado ({source}): {path}"
+        ),
+        "ui.dialog.preferences.rclone_status_invalid": "Executável rclone inválido: {error}",
+        "ui.dialog.preferences.group_updates": "Notificações de Lançamento",
+        "ui.dialog.preferences.check_startup": (
+            "Verificar novas versões automaticamente ao iniciar"
+        ),
+        "ui.dialog.preferences.check_now": "Verificar Agora",
+        "ui.dialog.preferences.checking": "Verificando atualizações...",
+        "ui.dialog.preferences.last_check": "Última verificação: {time}",
+        "ui.dialog.preferences.never_checked": "Nunca",
+        "ui.dialog.preferences.save": "Salvar",
+        "ui.dialog.preferences.cancel": "Cancelar",
+        "ui.dialog.preferences.apply": "Aplicar",
+        # Update Dialog
+        "ui.dialog.update.title_update": "Atualização Disponível",
+        "ui.dialog.update.title_latest": "Pontis está Atualizado",
+        "ui.dialog.update.available_header": "Uma nova versão do Pontis está disponível!",
+        "ui.dialog.update.latest_header": "Você está usando a versão mais recente",
+        "ui.dialog.update.versions_compare": (
+            "A versão {latest} está disponível (versão atual: {current})."
+        ),
+        "ui.dialog.update.latest_desc": ("Pontis v{current} é a versão mais recente disponível."),
+        "ui.dialog.update.published_date": "Publicado em: {date}",
+        "ui.dialog.update.notes_title": "Notas da Versão:",
+        "ui.dialog.update.ignore_version": "Não me notificar novamente sobre a versão {version}",
+        "ui.dialog.update.open_download": "Página de Download...",
+        "ui.dialog.update.later": "Mais Tarde",
+        "ui.dialog.update.ok": "OK",
+        # About Dialog
+        "ui.dialog.about.title": "Sobre o Pontis",
+        "ui.dialog.about.description": (
+            "Sincronização bidirecional de pastas com provedores de nuvem, "
+            "impulsionada pelo rclone."
+        ),
+        "ui.dialog.about.rclone_detecting": "Detectando instalação do rclone...",
+        "ui.dialog.about.rclone_not_found": "Binário do rclone não detectado no sistema",
+        "ui.dialog.about.license_info": (
+            "Distribuído sob os termos da licença GNU General Public License v3.0 "
+            "ou posterior (GPL-3.0-or-later)."
+        ),
+        "ui.dialog.about.author_info": "Desenvolvido por Luis Cesar Azevedo",
+        "ui.dialog.about.github_button": "Repositório no GitHub",
+        "ui.dialog.about.close": "Fechar",
     },
 }
+
+_LISTENERS: list[Callable[[], None]] = []
+
+
+def register_language_listener(callback: Callable[[], None]) -> None:
+    """Register a callback invoked whenever the active language changes."""
+    if callback not in _LISTENERS:
+        _LISTENERS.append(callback)
+
+
+def unregister_language_listener(callback: Callable[[], None]) -> None:
+    """Remove a previously registered language change callback."""
+    if callback in _LISTENERS:
+        _LISTENERS.remove(callback)
+
+
+def notify_language_listeners() -> None:
+    """Notify all listeners that the UI language has changed."""
+    for cb in list(_LISTENERS):
+        with contextlib.suppress(Exception):
+            cb()
 
 
 def set_language(lang: str | None) -> None:
     """Explicitly set the active UI language (e.g. 'pt_BR' or 'en'), or reset."""
     global _OVERRIDE_LANG
-    _OVERRIDE_LANG = lang
+    if lang != _OVERRIDE_LANG:
+        _OVERRIDE_LANG = lang
+        notify_language_listeners()
 
 
 def current_language() -> str:
