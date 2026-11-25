@@ -5,7 +5,6 @@ from __future__ import annotations
 
 import configparser
 import json
-import os
 import re
 import subprocess
 from collections.abc import Sequence
@@ -14,6 +13,7 @@ from typing import Any
 
 from pontis.domain.models import RemoteInfo, RemoteTestResult
 from pontis.infra.keyring_store import KeyringStore
+from pontis.infra.rclone import clean_subprocess_env
 
 _REMOTE_NAME_RE = re.compile(r"^[A-Za-z0-9_][A-Za-z0-9_.\- ]*$")
 
@@ -70,9 +70,7 @@ class RemoteService:
         self.keyring_store = keyring_store or KeyringStore()
 
     def _get_env(self, extra_env: dict[str, str] | None = None) -> dict[str, str]:
-        env = os.environ.copy()
-        if extra_env:
-            env.update(extra_env)
+        env = clean_subprocess_env(extra_env)
         password = self.keyring_store.get_password()
         if password:
             env["RCLONE_CONFIG_PASS"] = password
@@ -331,7 +329,7 @@ class RemoteService:
         if not source.is_file():
             raise FileNotFoundError(str(source))
 
-        source_env = os.environ.copy()
+        source_env = clean_subprocess_env()
         if source_password:
             source_env["RCLONE_CONFIG_PASS"] = source_password
         elif self.keyring_store.has_password():

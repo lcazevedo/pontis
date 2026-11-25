@@ -1,0 +1,13 @@
+[Desktop Entry]
+Type=Application
+Name=Pontis
+GenericName=Cloud Folder Sync
+GenericName[pt_BR]=Sincronização de Pastas na Nuvem
+Comment=Safe bidirectional sync between local folders and the cloud via rclone
+Comment[pt_BR]=Sincronização bidirecional segura entre pastas locais e nuvem via rclone
+Exec=pontis %U
+Icon=io.github.lcazevedo.Pontis
+Terminal=false
+Categories=Utility;FileTools;Qt;
+Keywords=sync;rclone;cloud;drive;onedrive;dropbox;backup;
+StartupWMClass=pontis

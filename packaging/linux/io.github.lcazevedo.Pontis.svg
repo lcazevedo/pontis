@@ -1,0 +1,36 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 256 256" width="256" height="256">
+  <defs>
+    <linearGradient id="bg" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#1d4ed8"/>
+      <stop offset="100%" stop-color="#0284c7"/>
+    </linearGradient>
+    <linearGradient id="arch" x1="0%" y1="0%" x2="100%" y2="0%">
+      <stop offset="0%" stop-color="#e0f2fe"/>
+      <stop offset="100%" stop-color="#ffffff"/>
+    </linearGradient>
+  </defs>
+
+  <!-- Rounded background -->
+  <rect x="12" y="12" width="232" height="232" rx="52" fill="url(#bg)"/>
+
+  <!-- Subtle inner border -->
+  <rect x="18" y="18" width="220" height="220" rx="46" fill="none" stroke="#ffffff" stroke-opacity="0.16" stroke-width="2"/>
+
+  <!-- Left local folder glyph -->
+  <path d="M44 148 C44 141 49 136 56 136 L76 136 L83 144 L104 144 C110 144 114 148 114 154 L114 186 C114 192 109 196 103 196 L56 196 C49 196 44 191 44 185 Z"
+        fill="#f8fafc" fill-opacity="0.96"/>
+
+  <!-- Right cloud glyph -->
+  <path d="M156 196 C144 196 136 188 136 177 C136 167 143 160 152 158 C155 144 167 135 181 135 C196 135 208 146 209 161 C216 163 221 170 221 178 C221 188 213 196 202 196 Z"
+        fill="#f8fafc" fill-opacity="0.96"/>
+
+  <!-- Stylised bridge arch connecting local and cloud -->
+  <path d="M70 120 C88 68, 168 68, 186 120"
+        fill="none" stroke="url(#arch)" stroke-width="14" stroke-linecap="round"/>
+
+  <!-- Bidirectional sync arrows inside bridge -->
+  <path d="M104 102 L152 102 M140 90 L154 102 L140 114"
+        fill="none" stroke="#bae6fd" stroke-width="7" stroke-linecap="round" stroke-linejoin="round"/>
+  <path d="M152 122 L104 122 M116 110 L102 122 L116 134"
+        fill="none" stroke="#ffffff" stroke-width="7" stroke-linecap="round" stroke-linejoin="round"/>
+</svg>

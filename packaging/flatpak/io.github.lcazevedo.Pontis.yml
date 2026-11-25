@@ -1,0 +1,33 @@
+# Flatpak manifest for Pontis (Linux).
+# Note: To build offline inside flatpak-builder, generate python3-deps.json using
+# flatpak-pip-generator (PySide6 is provided by org.kde.Platform/PySide6 BaseApp or wheels):
+#   flatpak-pip-generator --runtime=org.kde.Sdk//6.8 platformdirs keyring watchdog
+# Also ensure rclone is available on the host or added as an extra module for sandboxed runs.
+app-id: io.github.lcazevedo.Pontis
+runtime: org.kde.Platform
+runtime-version: '6.8'
+sdk: org.kde.Sdk
+command: pontis
+
+finish-args:
+  - --share=ipc
+  - --socket=fallback-x11
+  - --socket=wayland
+  - --device=dri
+  - --share=network
+  - --filesystem=home
+  - --talk-name=org.freedesktop.secrets
+  - --talk-name=org.freedesktop.Notifications
+
+modules:
+  - name: pontis
+    buildsystem: simple
+    build-commands:
+      - pip3 install --verbose --exists-action=i --no-index --find-links="file://${PWD}" --prefix=${FLATPAK_DEST} --no-build-isolation .
+      - install -Dm644 packaging/linux/io.github.lcazevedo.Pontis.desktop ${FLATPAK_DEST}/share/applications/io.github.lcazevedo.Pontis.desktop
+      - install -Dm644 packaging/linux/io.github.lcazevedo.Pontis.svg ${FLATPAK_DEST}/share/icons/hicolor/scalable/apps/io.github.lcazevedo.Pontis.svg
+      - install -Dm644 packaging/linux/io.github.lcazevedo.Pontis.png ${FLATPAK_DEST}/share/icons/hicolor/256x256/apps/io.github.lcazevedo.Pontis.png
+      - install -Dm644 packaging/linux/io.github.lcazevedo.Pontis.metainfo.xml ${FLATPAK_DEST}/share/metainfo/io.github.lcazevedo.Pontis.metainfo.xml
+    sources:
+      - type: dir
+        path: ../..

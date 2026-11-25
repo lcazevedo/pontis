@@ -66,7 +66,19 @@ Se ainda não tiver o `rclone` instalado, siga as [instruções oficiais de inst
 
 ---
 
-## Instalação (a partir do código-fonte)
+## Instalação
+
+### AppImage (Linux x86_64)
+
+É possível gerar um pacote AppImage autossuficiente (sem exigir Python instalado na máquina de destino; requer apenas o `rclone >= 1.66.0` externo):
+
+```bash
+./packaging/linux/build_appimage.sh
+```
+
+Veja [Empacotamento Linux](packaging/README.md) para detalhes do build, verificação em container Docker limpo e manifesto Flatpak.
+
+### A partir do código-fonte
 
 O Pontis usa **Conda** (`pontis-dev`) durante o desenvolvimento e instalação local:
 
@@ -79,7 +91,7 @@ conda activate pontis-dev
 pip install -e ".[dev]"
 ```
 
-Para abrir a interface gráfica:
+Para abrir a interface gráfica (segue automaticamente o idioma do sistema, com inglês como padrão/fallback):
 
 ```bash
 pontis

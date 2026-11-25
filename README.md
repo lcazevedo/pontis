@@ -66,7 +66,19 @@ If `rclone` is not installed yet, follow the official [rclone installation instr
 
 ---
 
-## Installation (from source)
+## Installation
+
+### AppImage (Linux x86_64)
+
+Self-contained AppImage builds (no Python installation required; external `rclone >= 1.66.0` required) can be built and verified with:
+
+```bash
+./packaging/linux/build_appimage.sh
+```
+
+See [Linux Packaging](packaging/README.md) for AppImage build/Docker verification instructions and the Flatpak manifest.
+
+### From Source
 
 Pontis uses **Conda** (`pontis-dev`) for development and source installs:
 
@@ -79,7 +91,7 @@ conda activate pontis-dev
 pip install -e ".[dev]"
 ```
 
-Launch the desktop application:
+Launch the desktop application (defaults to your system language, falling back to English):
 
 ```bash
 pontis

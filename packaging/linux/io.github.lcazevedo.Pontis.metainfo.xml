@@ -1,0 +1,35 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<component type="desktop-application">
+  <id>io.github.lcazevedo.Pontis</id>
+  <metadata_license>CC0-1.0</metadata_license>
+  <project_license>GPL-3.0-or-later</project_license>
+
+  <name>Pontis</name>
+  <summary>Safe bidirectional folder sync between local storage and the cloud via rclone</summary>
+  <summary xml:lang="pt-BR">Sincronização bidirecional segura entre pastas locais e a nuvem via rclone</summary>
+
+  <description>
+    <p>
+      Pontis is a desktop application for safe, bidirectional file synchronization
+      between local directories and 70+ cloud storage providers powered by rclone.
+    </p>
+    <p xml:lang="pt-BR">
+      O Pontis é um aplicativo desktop para sincronização bidirecional segura de
+      arquivos entre pastas locais e mais de 70 provedores de nuvem usando o rclone.
+    </p>
+    <ul>
+      <li>Mandatory dry-run simulation before the first synchronization of each profile</li>
+      <li>Friendly mass-deletion protection and interactive conflict resolution</li>
+      <li>Isolated rclone configuration and system keyring support</li>
+      <li>English and Brazilian Portuguese interface with Light and Dark themes</li>
+    </ul>
+  </description>
+
+  <launchable type="desktop-id">io.github.lcazevedo.Pontis.desktop</launchable>
+
+  <url type="homepage">https://github.com/lcazevedo/pontis</url>
+  <url type="bugtracker">https://github.com/lcazevedo/pontis/issues</url>
+  <url type="donation">https://github.com/sponsors/lcazevedo</url>
+
+  <content_rating type="oars-1.1"/>
+</component>

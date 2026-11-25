@@ -7,6 +7,8 @@ import os
 import re
 import shutil
 import subprocess
+import sys
+from collections.abc import Mapping
 from dataclasses import dataclass
 from pathlib import Path
 
@@ -63,6 +65,24 @@ def app_rclone_path() -> Path:
     return data_dir() / "bin" / "rclone"
 
 
+def clean_subprocess_env(extra: Mapping[str, str] | None = None) -> dict[str, str]:
+    """Return a subprocess environment safe from PyInstaller's ``LD_LIBRARY_PATH``.
+
+    When running from a frozen PyInstaller bundle, restore ``LD_LIBRARY_PATH_ORIG``
+    or unset ``LD_LIBRARY_PATH`` so external binaries like ``rclone`` do not load
+    bundled libraries incompatible with the host system.
+    """
+    env = os.environ.copy()
+    if getattr(sys, "frozen", False):
+        if "LD_LIBRARY_PATH_ORIG" in env:
+            env["LD_LIBRARY_PATH"] = env["LD_LIBRARY_PATH_ORIG"]
+        else:
+            env.pop("LD_LIBRARY_PATH", None)
+    if extra:
+        env.update(extra)
+    return env
+
+
 def read_version(binary: Path) -> tuple[int, int, int]:
     """Run ``<binary> version`` and return its version."""
     try:
@@ -72,6 +92,7 @@ def read_version(binary: Path) -> tuple[int, int, int]:
             text=True,
             timeout=15,
             check=False,
+            env=clean_subprocess_env(),
         )
     except (OSError, subprocess.SubprocessError) as exc:
         raise RcloneNotFoundError(str(binary)) from exc

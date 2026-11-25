@@ -12,6 +12,7 @@ from pathlib import Path
 from typing import Any
 
 from pontis.domain.models import ConflictPolicy, SyncDirection, SyncProfile
+from pontis.infra.rclone import clean_subprocess_env
 
 _ANSI_RE = re.compile(r"\x1b\[[0-9;]*m")
 
@@ -257,7 +258,7 @@ class RcloneAdapter:
             stderr=subprocess.PIPE,
             text=True,
             errors="replace",
-            env=self._env,
+            env=clean_subprocess_env(self._env),
         )
         assert proc.stderr is not None
         self._current_process = proc

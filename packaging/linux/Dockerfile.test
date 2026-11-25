@@ -1,0 +1,42 @@
+# Minimal Ubuntu 24.04 environment with NO Python installed, used to verify
+# that the Pontis AppImage is self-contained (except for rclone, which is external in v1).
+FROM ubuntu:24.04
+
+ENV DEBIAN_FRONTEND=noninteractive
+
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    ca-certificates \
+    curl \
+    libdbus-1-3 \
+    libegl1 \
+    libfontconfig1 \
+    libgl1 \
+    libglib2.0-0 \
+    libice6 \
+    libnss3 \
+    libsm6 \
+    libxcb-cursor0 \
+    libxcb-icccm4 \
+    libxcb-image0 \
+    libxcb-keysyms1 \
+    libxcb-randr0 \
+    libxcb-render-util0 \
+    libxcb-shape0 \
+    libxcb-xfixes0 \
+    libxcb-xinerama0 \
+    libxi6 \
+    libxkbcommon-x11-0 \
+    libxkbcommon0 \
+    libxrender1 \
+    unzip \
+    && curl -fsSL -o /tmp/rclone.zip https://downloads.rclone.org/rclone-current-linux-amd64.zip \
+    && unzip -q /tmp/rclone.zip -d /tmp/rclone-unpack \
+    && install -m 0755 /tmp/rclone-unpack/rclone-*/rclone /usr/local/bin/rclone \
+    && rm -rf /tmp/rclone.zip /tmp/rclone-unpack \
+    && apt-get purge -y --auto-remove curl unzip \
+    && rm -rf /var/lib/apt/lists/*
+
+# Sanity check: ensure no Python interpreter exists in the container
+RUN ! command -v python3 && ! command -v python
+
+WORKDIR /work
