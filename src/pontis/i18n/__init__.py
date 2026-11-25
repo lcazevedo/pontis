@@ -646,7 +646,6 @@ _CATALOG: dict[str, dict[str, str]] = {
         "ui.menu.support": "Support Pontis",
         "ui.support.github_sponsors": "GitHub Sponsors",
         "ui.support.kofi": "Ko-fi",
-        "ui.support.buymeacoffee": "Buy Me a Coffee",
         "ui.dialog.about.support_title": "Support the Project",
         "ui.dialog.about.support_text": (
             "Pontis is free and open-source software. If it saves you time, "
@@ -1325,7 +1324,6 @@ _CATALOG: dict[str, dict[str, str]] = {
         "ui.menu.support": "Apoiar o Pontis",
         "ui.support.github_sponsors": "GitHub Sponsors",
         "ui.support.kofi": "Ko-fi",
-        "ui.support.buymeacoffee": "Buy Me a Coffee",
         "ui.dialog.about.support_title": "Apoie o projeto",
         "ui.dialog.about.support_text": (
             "O Pontis é software livre e gratuito. Se ele ajuda no seu dia a dia, "

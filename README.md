@@ -173,7 +173,6 @@ If Pontis saves you time and you would like to support its maintenance on a volu
 
 - 💖 [GitHub Sponsors](https://github.com/sponsors/lcazevedo)
 - ☕ [Ko-fi](https://ko-fi.com/lcazevedo)
-- 🥤 [Buy Me a Coffee](https://buymeacoffee.com/lcazevedo)
 
 ---
 

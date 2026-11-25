@@ -35,4 +35,4 @@ v1 targets Linux only, while the codebase uses `pathlib`, `platformdirs`, `PySid
 No. Pontis has zero telemetry, ads, or analytics. The only network connections it makes (besides `rclone` talking to your configured cloud remotes) are optional read-only HTTPS GET checks to GitHub Releases when update checking is enabled—which you can turn off in **Preferences**.
 
 ### How can I support Pontis?
-Pontis is free and open-source (`GPL-3.0-or-later`). Contributions (bug reports, docs, translations, PRs) are always appreciated. Optional voluntary donations are available via [GitHub Sponsors](https://github.com/sponsors/lcazevedo), [Ko-fi](https://ko-fi.com/lcazevedo), and [Buy Me a Coffee](https://buymeacoffee.com/lcazevedo).
+Pontis is free and open-source (`GPL-3.0-or-later`). Contributions (bug reports, docs, translations, PRs) are always appreciated. Optional voluntary donations are available via [GitHub Sponsors](https://github.com/sponsors/lcazevedo) and [Ko-fi](https://ko-fi.com/lcazevedo).

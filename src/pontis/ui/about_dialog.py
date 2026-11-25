@@ -21,7 +21,6 @@ from pontis import __version__ as APP_VERSION
 from pontis.i18n import tr
 from pontis.infra.rclone import format_version, locate_rclone
 from pontis.links import (
-    BUYMEACOFFEE_URL,
     GITHUB_SPONSORS_URL,
     GITHUB_URL,
     KOFI_URL,
@@ -110,12 +109,8 @@ class AboutDialog(QDialog):
             "ui.support.github_sponsors", GITHUB_SPONSORS_URL
         )
         self._support_kofi_btn = self._make_support_button("ui.support.kofi", KOFI_URL)
-        self._support_bmc_btn = self._make_support_button(
-            "ui.support.buymeacoffee", BUYMEACOFFEE_URL
-        )
         support_btns.addWidget(self._support_sponsors_btn)
         support_btns.addWidget(self._support_kofi_btn)
-        support_btns.addWidget(self._support_bmc_btn)
         support_btns.addStretch()
         support_layout.addLayout(support_btns)
 

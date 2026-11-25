@@ -31,4 +31,4 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **Documentation & Voluntary Support:**
   - Bilingual documentation (`README.md`, `README.pt-BR.md`, user guides, Google `client_id` setup guide, FAQ, ADRs, `CONTRIBUTING.md`, `CODE_OF_CONDUCT.md`, `SECURITY.md`, `THIRD_PARTY_LICENSES.md`).
   - Application screenshots generated with fictional profiles in `docs/screenshots/`.
-  - `.github/FUNDING.yml` and discreet, non-intrusive voluntary support links (GitHub Sponsors, Ko-fi, Buy Me a Coffee) in the status bar, Help menu, and About dialog.
+  - `.github/FUNDING.yml` and discreet, non-intrusive voluntary support links (GitHub Sponsors, Ko-fi) in the status bar, Help menu, and About dialog.

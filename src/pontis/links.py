@@ -10,10 +10,8 @@ GITHUB_SECURITY_URL = f"{GITHUB_URL}/security/advisories/new"
 
 GITHUB_SPONSORS_URL = "https://github.com/sponsors/lcazevedo"
 KOFI_URL = "https://ko-fi.com/lcazevedo"
-BUYMEACOFFEE_URL = "https://buymeacoffee.com/lcazevedo"
 
 SUPPORT_LINKS: tuple[tuple[str, str], ...] = (
     ("ui.support.github_sponsors", GITHUB_SPONSORS_URL),
     ("ui.support.kofi", KOFI_URL),
-    ("ui.support.buymeacoffee", BUYMEACOFFEE_URL),
 )

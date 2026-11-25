@@ -35,4 +35,4 @@ A v1 é focada em Linux, mas o código usa `pathlib`, `platformdirs`, `PySide6` 
 Não. O Pontis não tem anúncios, rastreamento nem telemetria. Além das conexões do `rclone` com as suas nuvens, a única requisição de rede opcional é a verificação somente leitura de novas versões no GitHub Releases (que pode ser desativada em **Preferências**).
 
 ### Como posso apoiar o projeto?
-O Pontis é software livre (`GPL-3.0-or-later`). Relatos de bugs, sugestões, traduções e Pull Requests são muito bem-vindos. Se desejar contribuir financeiramente de forma opcional, há links discretos no app e no README para [GitHub Sponsors](https://github.com/sponsors/lcazevedo), [Ko-fi](https://ko-fi.com/lcazevedo) e [Buy Me a Coffee](https://buymeacoffee.com/lcazevedo).
+O Pontis é software livre (`GPL-3.0-or-later`). Relatos de bugs, sugestões, traduções e Pull Requests são muito bem-vindos. Se desejar contribuir financeiramente de forma opcional, há links discretos no app e no README para [GitHub Sponsors](https://github.com/sponsors/lcazevedo) e [Ko-fi](https://ko-fi.com/lcazevedo).

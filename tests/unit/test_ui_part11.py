@@ -11,7 +11,6 @@ from PySide6.QtGui import QDesktopServices
 from pontis.i18n import set_language
 from pontis.infra.settings import SettingsManager
 from pontis.links import (
-    BUYMEACOFFEE_URL,
     GITHUB_ISSUES_URL,
     GITHUB_SECURITY_URL,
     GITHUB_SPONSORS_URL,
@@ -36,7 +35,6 @@ def test_support_links_constants() -> None:
         GITHUB_SECURITY_URL,
         GITHUB_SPONSORS_URL,
         KOFI_URL,
-        BUYMEACOFFEE_URL,
     ]
     for url in urls:
         assert url.startswith("https://")
@@ -44,7 +42,6 @@ def test_support_links_constants() -> None:
     assert SUPPORT_LINKS == (
         ("ui.support.github_sponsors", GITHUB_SPONSORS_URL),
         ("ui.support.kofi", KOFI_URL),
-        ("ui.support.buymeacoffee", BUYMEACOFFEE_URL),
     )
 
 
@@ -72,7 +69,7 @@ def test_main_window_discrete_support_widget(
     assert win._support_button.accessibleName() != ""
     assert win._support_button.text() == "Apoiar"
     assert win._support_menu.title() == "Apoiar o Pontis"
-    assert len(win._support_menu.actions()) == 3
+    assert len(win._support_menu.actions()) == 2
 
     # Live language switch updates support button and Help submenu
     set_language("en")
@@ -82,9 +79,8 @@ def test_main_window_discrete_support_widget(
     # Trigger each support action and verify opened URL
     win._action_support_sponsors.trigger()
     win._action_support_kofi.trigger()
-    win._action_support_bmc.trigger()
 
-    assert opened_urls == [GITHUB_SPONSORS_URL, KOFI_URL, BUYMEACOFFEE_URL]
+    assert opened_urls == [GITHUB_SPONSORS_URL, KOFI_URL]
 
     set_language(None)
 
@@ -104,12 +100,10 @@ def test_about_dialog_support_buttons(qtbot: QtBot, monkeypatch: object) -> None
 
     dialog._support_sponsors_btn.click()
     dialog._support_kofi_btn.click()
-    dialog._support_bmc_btn.click()
     dialog._repo_button.click()
 
     assert opened_urls == [
         GITHUB_SPONSORS_URL,
         KOFI_URL,
-        BUYMEACOFFEE_URL,
         GITHUB_URL,
     ]
