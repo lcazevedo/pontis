@@ -4,7 +4,7 @@
 from __future__ import annotations
 
 from PySide6.QtCore import QPoint, Qt
-from PySide6.QtGui import QColor, QIcon, QPainter, QPen, QPixmap, QPolygon
+from PySide6.QtGui import QColor, QIcon, QPainter, QPainterPath, QPen, QPixmap, QPolygon
 
 _ICON_CACHE: dict[str, QIcon] = {}
 
@@ -152,6 +152,20 @@ def _create_fallback_icon(name: str) -> QIcon:
         painter.setPen(QPen(QColor(255, 255, 255), 2.0))
         painter.drawPoint(12, 8)
         painter.drawLine(12, 11, 12, 16)
+    elif name in ("emblem-favorite", "support", "heart"):
+        path = QPainterPath()
+        path.moveTo(12, 18.5)
+        path.cubicTo(6.5, 14.8, 4.5, 11.2, 4.5, 8.6)
+        path.cubicTo(4.5, 6.4, 6.2, 5.0, 8.2, 5.0)
+        path.cubicTo(9.8, 5.0, 11.2, 5.9, 12.0, 7.2)
+        path.cubicTo(12.8, 5.9, 14.2, 5.0, 15.8, 5.0)
+        path.cubicTo(17.8, 5.0, 19.5, 6.4, 19.5, 8.6)
+        path.cubicTo(19.5, 11.2, 17.5, 14.8, 12.0, 18.5)
+        painter.setPen(
+            QPen(QColor(190, 18, 60), 1.6, Qt.PenStyle.SolidLine, Qt.PenCapStyle.RoundCap)
+        )
+        painter.setBrush(QColor(225, 29, 72, 40))
+        painter.drawPath(path)
     elif name == "status_cancelled":
         painter.setPen(Qt.PenStyle.NoPen)
         painter.setBrush(QColor(239, 108, 0))

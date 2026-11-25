@@ -14,10 +14,11 @@ from urllib.error import HTTPError, URLError
 from PySide6.QtCore import QThread, Signal
 
 from pontis import __version__ as APP_VERSION
+from pontis.links import GITHUB_REPO
 
 logger = logging.getLogger(__name__)
 
-DEFAULT_REPO = "lcazevedo/pontis"
+DEFAULT_REPO = GITHUB_REPO
 GITHUB_API_RELEASES_URL = "https://api.github.com/repos/{repo}/releases/latest"
 
 _VERSION_CLEAN_RE = re.compile(r"^v?(\d+)(?:\.(\d+))?(?:\.(\d+))?(.*)$", re.IGNORECASE)

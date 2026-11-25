@@ -5,8 +5,8 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING
 
-from PySide6.QtCore import QPoint, Qt, QTimer
-from PySide6.QtGui import QAction, QActionGroup, QCloseEvent, QKeySequence
+from PySide6.QtCore import QPoint, Qt, QTimer, QUrl
+from PySide6.QtGui import QAction, QActionGroup, QCloseEvent, QDesktopServices, QKeySequence
 from PySide6.QtWidgets import (
     QAbstractItemView,
     QFileDialog,
@@ -31,6 +31,7 @@ from pontis.infra.rclone import locate_rclone
 from pontis.infra.rclone_adapter import RcloneAdapter
 from pontis.infra.repositories import RunRepository
 from pontis.infra.settings import AppSettings, SettingsManager, get_settings_manager
+from pontis.links import BUYMEACOFFEE_URL, GITHUB_SPONSORS_URL, KOFI_URL
 from pontis.services.import_export_service import ProfileTransfer, ScriptImporter
 from pontis.services.profile_service import ProfileService, ProfileSummary
 from pontis.services.remote_service import RemoteService
@@ -141,6 +142,7 @@ class MainWindow(QMainWindow):
         self._create_toolbar()
         self._create_menus()
         self._create_central_widget()
+        self._create_support_status_button()
         self.statusBar().showMessage(tr("ui.statusbar.ready"))
 
     def _create_actions(self) -> None:
@@ -245,6 +247,14 @@ class MainWindow(QMainWindow):
         self._action_about.setToolTip(tr("ui.actions.about.tooltip"))
         self._action_about.setShortcut(QKeySequence("F1"))
         self._action_about.triggered.connect(self._on_about)
+
+        self._action_support_sponsors = self._make_support_action(
+            "ui.support.github_sponsors", GITHUB_SPONSORS_URL
+        )
+        self._action_support_kofi = self._make_support_action("ui.support.kofi", KOFI_URL)
+        self._action_support_bmc = self._make_support_action(
+            "ui.support.buymeacoffee", BUYMEACOFFEE_URL
+        )
 
         self._action_quit = QAction(tr("ui.actions.quit"), self)
         self._action_quit.setToolTip(tr("ui.actions.quit.tooltip"))
@@ -361,6 +371,12 @@ class MainWindow(QMainWindow):
 
         self._menu_help = menubar.addMenu(tr("ui.menu.help"))
         self._menu_help.addAction(self._action_check_updates)
+        self._support_menu = self._menu_help.addMenu(
+            get_icon("emblem-favorite"), tr("ui.menu.support")
+        )
+        self._support_menu.addAction(self._action_support_sponsors)
+        self._support_menu.addAction(self._action_support_kofi)
+        self._support_menu.addAction(self._action_support_bmc)
         self._menu_help.addSeparator()
         self._menu_help.addAction(self._action_about)
 
@@ -411,6 +427,30 @@ class MainWindow(QMainWindow):
         self._stack.addWidget(self._empty_state)  # index 1
 
         self.setCentralWidget(self._stack)
+
+    def _make_support_action(self, label_key: str, url: str) -> QAction:
+        """Create a QAction that opens a voluntary support page."""
+        action = QAction(tr(label_key), self)
+        action.setToolTip(url)
+        action.triggered.connect(
+            lambda _checked=False, target=url: QDesktopServices.openUrl(QUrl(target))
+        )
+        return action
+
+    def _create_support_status_button(self) -> None:
+        """Add a discreet, non-intrusive voluntary support menu button to the status bar."""
+        self._support_button = QToolButton(self)
+        self._support_button.setObjectName("supportStatusButton")
+        self._support_button.setAutoRaise(True)
+        self._support_button.setIcon(get_icon("emblem-favorite"))
+        self._support_button.setText(tr("ui.actions.support"))
+        self._support_button.setToolTip(tr("ui.actions.support.tooltip"))
+        self._support_button.setAccessibleName(tr("ui.actions.support"))
+        self._support_button.setAccessibleDescription(tr("ui.actions.support.tooltip"))
+        self._support_button.setToolButtonStyle(Qt.ToolButtonStyle.ToolButtonTextBesideIcon)
+        self._support_button.setPopupMode(QToolButton.ToolButtonPopupMode.InstantPopup)
+        self._support_button.setMenu(self._support_menu)
+        self.statusBar().addPermanentWidget(self._support_button)
 
     def load_profiles(self) -> None:
         """Fetch profiles from SQLite and refresh the view."""
@@ -891,6 +931,14 @@ class MainWindow(QMainWindow):
         self._action_check_updates.setToolTip(tr("ui.actions.check_updates.tooltip"))
         self._action_about.setText(tr("ui.actions.about"))
         self._action_about.setToolTip(tr("ui.actions.about.tooltip"))
+        self._support_menu.setTitle(tr("ui.menu.support"))
+        self._action_support_sponsors.setText(tr("ui.support.github_sponsors"))
+        self._action_support_kofi.setText(tr("ui.support.kofi"))
+        self._action_support_bmc.setText(tr("ui.support.buymeacoffee"))
+        self._support_button.setText(tr("ui.actions.support"))
+        self._support_button.setToolTip(tr("ui.actions.support.tooltip"))
+        self._support_button.setAccessibleName(tr("ui.actions.support"))
+        self._support_button.setAccessibleDescription(tr("ui.actions.support.tooltip"))
         self._action_quit.setText(tr("ui.actions.quit"))
         self._action_quit.setToolTip(tr("ui.actions.quit.tooltip"))
 

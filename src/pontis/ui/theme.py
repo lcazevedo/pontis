@@ -213,6 +213,44 @@ QScrollBar::handle:vertical {
 QScrollBar::handle:vertical:hover {
     background: #94a3b8;
 }
+
+QToolButton#supportStatusButton {
+    background-color: transparent;
+    color: #475569;
+    border: 1px solid transparent;
+    border-radius: 4px;
+    padding: 2px 8px;
+    font-weight: 400;
+}
+
+QToolButton#supportStatusButton:hover {
+    background-color: #e2e8f0;
+    color: #0f172a;
+    border: 1px solid #cbd5e1;
+}
+
+QToolButton#supportStatusButton:focus {
+    border: 2px solid #2563eb;
+}
+
+QPushButton#supportLinkButton {
+    background-color: #ffffff;
+    color: #1e293b;
+    border: 1px solid #cbd5e1;
+    border-radius: 4px;
+    padding: 6px 12px;
+    font-weight: 500;
+}
+
+QPushButton#supportLinkButton:hover {
+    background-color: #f1f5f9;
+    border: 1px solid #94a3b8;
+}
+
+QPushButton#supportLinkButton:focus {
+    border: 2px solid #2563eb;
+    outline: none;
+}
 """
 
 _DARK_QSS = """
@@ -406,6 +444,44 @@ QScrollBar::handle:vertical {
 
 QScrollBar::handle:vertical:hover {
     background: #475569;
+}
+
+QToolButton#supportStatusButton {
+    background-color: transparent;
+    color: #94a3b8;
+    border: 1px solid transparent;
+    border-radius: 4px;
+    padding: 2px 8px;
+    font-weight: 400;
+}
+
+QToolButton#supportStatusButton:hover {
+    background-color: #334155;
+    color: #f8fafc;
+    border: 1px solid #475569;
+}
+
+QToolButton#supportStatusButton:focus {
+    border: 2px solid #60a5fa;
+}
+
+QPushButton#supportLinkButton {
+    background-color: #1e293b;
+    color: #e2e8f0;
+    border: 1px solid #475569;
+    border-radius: 4px;
+    padding: 6px 12px;
+    font-weight: 500;
+}
+
+QPushButton#supportLinkButton:hover {
+    background-color: #334155;
+    border: 1px solid #64748b;
+}
+
+QPushButton#supportLinkButton:focus {
+    border: 2px solid #60a5fa;
+    outline: none;
 }
 """
 

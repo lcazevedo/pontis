@@ -639,6 +639,18 @@ _CATALOG: dict[str, dict[str, str]] = {
         "ui.dialog.about.author_info": "Created by Luis Cesar Azevedo",
         "ui.dialog.about.github_button": "GitHub Repository",
         "ui.dialog.about.close": "Close",
+        # Voluntary support (discreet)
+        "ui.actions.support": "Support",
+        "ui.actions.support.tooltip": "Support Pontis development (optional)",
+        "ui.menu.support": "Support Pontis",
+        "ui.support.github_sponsors": "GitHub Sponsors",
+        "ui.support.kofi": "Ko-fi",
+        "ui.support.buymeacoffee": "Buy Me a Coffee",
+        "ui.dialog.about.support_title": "Support the Project",
+        "ui.dialog.about.support_text": (
+            "Pontis is free and open-source software. If it saves you time, "
+            "consider supporting its development:"
+        ),
     },
     "pt_BR": {
         # Profile CLI messages
@@ -1305,6 +1317,18 @@ _CATALOG: dict[str, dict[str, str]] = {
         "ui.dialog.about.author_info": "Desenvolvido por Luis Cesar Azevedo",
         "ui.dialog.about.github_button": "Repositório no GitHub",
         "ui.dialog.about.close": "Fechar",
+        # Voluntary support (discreet)
+        "ui.actions.support": "Apoiar",
+        "ui.actions.support.tooltip": "Apoie o desenvolvimento do Pontis (opcional)",
+        "ui.menu.support": "Apoiar o Pontis",
+        "ui.support.github_sponsors": "GitHub Sponsors",
+        "ui.support.kofi": "Ko-fi",
+        "ui.support.buymeacoffee": "Buy Me a Coffee",
+        "ui.dialog.about.support_title": "Apoie o projeto",
+        "ui.dialog.about.support_text": (
+            "O Pontis é software livre e gratuito. Se ele ajuda no seu dia a dia, "
+            "considere apoiar o desenvolvimento:"
+        ),
     },
 }
 

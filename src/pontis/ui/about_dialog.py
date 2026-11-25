@@ -9,6 +9,7 @@ from PySide6.QtCore import QUrl
 from PySide6.QtGui import QDesktopServices
 from PySide6.QtWidgets import (
     QDialog,
+    QGroupBox,
     QHBoxLayout,
     QLabel,
     QPushButton,
@@ -19,6 +20,12 @@ from PySide6.QtWidgets import (
 from pontis import __version__ as APP_VERSION
 from pontis.i18n import tr
 from pontis.infra.rclone import format_version, locate_rclone
+from pontis.links import (
+    BUYMEACOFFEE_URL,
+    GITHUB_SPONSORS_URL,
+    GITHUB_URL,
+    KOFI_URL,
+)
 from pontis.ui.icons import get_icon
 
 if TYPE_CHECKING:
@@ -37,7 +44,7 @@ class AboutDialog(QDialog):
         self._rclone_binary = rclone_binary
 
         self.setWindowTitle(tr("ui.dialog.about.title"))
-        self.setFixedSize(480, 360)
+        self.setFixedSize(520, 430)
         self.setWindowIcon(get_icon("help-about"))
         self._init_ui()
 
@@ -87,17 +94,41 @@ class AboutDialog(QDialog):
         details_layout.addWidget(author_label)
 
         layout.addLayout(details_layout)
+
+        # Discreet voluntary support section
+        support_group = QGroupBox(tr("ui.dialog.about.support_title"), self)
+        support_layout = QVBoxLayout(support_group)
+        support_layout.setSpacing(8)
+
+        support_text = QLabel(tr("ui.dialog.about.support_text"), self)
+        support_text.setWordWrap(True)
+        support_layout.addWidget(support_text)
+
+        support_btns = QHBoxLayout()
+        support_btns.setSpacing(8)
+        self._support_sponsors_btn = self._make_support_button(
+            "ui.support.github_sponsors", GITHUB_SPONSORS_URL
+        )
+        self._support_kofi_btn = self._make_support_button("ui.support.kofi", KOFI_URL)
+        self._support_bmc_btn = self._make_support_button(
+            "ui.support.buymeacoffee", BUYMEACOFFEE_URL
+        )
+        support_btns.addWidget(self._support_sponsors_btn)
+        support_btns.addWidget(self._support_kofi_btn)
+        support_btns.addWidget(self._support_bmc_btn)
+        support_btns.addStretch()
+        support_layout.addLayout(support_btns)
+
+        layout.addWidget(support_group)
         layout.addStretch()
 
         # Action Buttons
         btn_layout = QHBoxLayout()
 
-        repo_button = QPushButton(tr("ui.dialog.about.github_button"), self)
-        repo_button.setIcon(get_icon("emblem-web"))
-        repo_button.clicked.connect(
-            lambda: QDesktopServices.openUrl(QUrl("https://github.com/lcazevedo/pontis"))
-        )
-        btn_layout.addWidget(repo_button)
+        self._repo_button = QPushButton(tr("ui.dialog.about.github_button"), self)
+        self._repo_button.setIcon(get_icon("emblem-web"))
+        self._repo_button.clicked.connect(lambda: QDesktopServices.openUrl(QUrl(GITHUB_URL)))
+        btn_layout.addWidget(self._repo_button)
 
         btn_layout.addStretch()
 
@@ -107,3 +138,15 @@ class AboutDialog(QDialog):
         btn_layout.addWidget(close_button)
 
         layout.addLayout(btn_layout)
+
+    def _make_support_button(self, label_key: str, url: str) -> QPushButton:
+        """Create a discreet secondary button that opens a voluntary support URL."""
+        label = tr(label_key)
+        btn = QPushButton(label, self)
+        btn.setObjectName("supportLinkButton")
+        btn.setToolTip(url)
+        btn.setAccessibleName(label)
+        btn.clicked.connect(
+            lambda _checked=False, target=url: QDesktopServices.openUrl(QUrl(target))
+        )
+        return btn
