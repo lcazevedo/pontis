@@ -20,7 +20,7 @@ DEFAULT_SETTINGS_FILENAME = "settings.json"
 class AppSettings:
     """User-configurable application settings."""
 
-    language: str = "pt_BR"  # "pt_BR" or "en"
+    language: str = "system"  # "system", "en", or "pt_BR"
     theme: str = "system"  # "system", "light", or "dark"
     rclone_path: str = ""  # Custom rclone binary path (empty = auto-detect)
     check_updates_on_startup: bool = True
@@ -29,8 +29,8 @@ class AppSettings:
 
     def validate(self) -> None:
         """Sanitize and validate configuration values."""
-        if self.language not in ("pt_BR", "en"):
-            self.language = "pt_BR"
+        if self.language not in ("system", "en", "pt_BR"):
+            self.language = "system"
         if self.theme not in ("system", "light", "dark"):
             self.theme = "system"
 
@@ -60,7 +60,7 @@ class SettingsManager:
                 return AppSettings()
 
             settings = AppSettings(
-                language=str(data.get("language", "pt_BR")),
+                language=str(data.get("language", "system")),
                 theme=str(data.get("theme", "system")),
                 rclone_path=str(data.get("rclone_path", "")),
                 check_updates_on_startup=bool(data.get("check_updates_on_startup", True)),

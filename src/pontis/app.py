@@ -40,10 +40,11 @@ def main() -> int:
     from pontis.ui.theme import ThemeMode, apply_theme
 
     settings = load_settings()
-    if settings.language:
-        set_language(settings.language)
+    set_language(settings.language)
 
     app = QApplication(sys.argv)
+    app.setApplicationName("pontis")
+    app.setDesktopFileName("io.github.lcazevedo.Pontis")
     if settings.theme:
         try:
             apply_theme(app, ThemeMode(settings.theme))

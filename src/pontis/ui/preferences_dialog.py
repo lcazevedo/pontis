@@ -24,7 +24,7 @@ from PySide6.QtWidgets import (
     QWidget,
 )
 
-from pontis.i18n import current_language, set_language, tr
+from pontis.i18n import set_language, tr
 from pontis.infra.rclone import format_version, locate_rclone
 from pontis.infra.settings import (
     AppSettings,
@@ -115,8 +115,9 @@ class PreferencesDialog(QDialog):
 
         lbl_lang = QLabel(tr("ui.dialog.preferences.language_label"), lang_group)
         self._combo_language = QComboBox(lang_group)
-        self._combo_language.addItem(tr("ui.dialog.preferences.lang_pt_br"), "pt_BR")
+        self._combo_language.addItem(tr("ui.dialog.preferences.lang_system"), "system")
         self._combo_language.addItem(tr("ui.dialog.preferences.lang_en"), "en")
+        self._combo_language.addItem(tr("ui.dialog.preferences.lang_pt_br"), "pt_BR")
         self._combo_language.setAccessibleName(tr("ui.dialog.preferences.language_label"))
 
         lang_layout.addWidget(lbl_lang)
@@ -320,7 +321,7 @@ class PreferencesDialog(QDialog):
 
     def apply_settings(self) -> AppSettings:
         """Collect widget inputs, persist, apply live runtime settings and notify."""
-        selected_lang = str(self._combo_language.currentData() or "pt_BR")
+        selected_lang = str(self._combo_language.currentData() or "system")
         selected_theme = str(self._combo_theme.currentData() or "system")
         rclone_path = self._edit_rclone.text().strip()
         check_startup = self._chk_check_startup.isChecked()
@@ -332,9 +333,8 @@ class PreferencesDialog(QDialog):
 
         self._manager.save(self._settings)
 
-        # Apply language live
-        if current_language() != selected_lang:
-            set_language(selected_lang)
+        # Apply language live (including resetting to "system")
+        set_language(selected_lang)
 
         # Apply theme live
         apply_theme(self, ThemeMode(selected_theme))

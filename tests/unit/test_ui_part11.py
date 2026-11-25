@@ -86,7 +86,7 @@ def test_main_window_discrete_support_widget(
 
     assert opened_urls == [GITHUB_SPONSORS_URL, KOFI_URL, BUYMEACOFFEE_URL]
 
-    set_language("pt_BR")
+    set_language(None)
 
 
 def test_about_dialog_support_buttons(qtbot: QtBot, monkeypatch: object) -> None:

@@ -5,9 +5,12 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING
 
+import pytest
+
 from pontis.i18n import (
     _CATALOG,
     current_language,
+    detect_system_language,
     register_language_listener,
     set_language,
     tr,
@@ -57,6 +60,35 @@ def test_i18n_runtime_listeners() -> None:
         assert len(invocations) >= 1
     finally:
         unregister_language_listener(on_change)
+        set_language(None)
+
+
+def test_detect_system_language_fallback_en(monkeypatch: pytest.MonkeyPatch) -> None:
+    """System language detection uses Portuguese when configured and falls back to English."""
+    for var in ("PONTIS_LANG", "LC_ALL", "LC_MESSAGES", "LANGUAGE", "LANG"):
+        monkeypatch.delenv(var, raising=False)
+
+    set_language(None)
+    assert detect_system_language() == "en"
+    assert current_language() == "en"
+
+    monkeypatch.setenv("LANG", "C.UTF-8")
+    assert detect_system_language() == "en"
+
+    monkeypatch.setenv("LANG", "fr_FR.UTF-8")
+    assert detect_system_language() == "en"
+
+    monkeypatch.setenv("LANG", "pt_BR.UTF-8")
+    assert detect_system_language() == "pt_BR"
+    assert current_language() == "pt_BR"
+
+    # Explicit override followed by "system" returns to environment detection
+    set_language("en")
+    assert current_language() == "en"
+    set_language("system")
+    assert current_language() == "pt_BR"
+
+    set_language(None)
 
 
 def test_main_window_live_language_switching(qtbot: QtBot, tmp_path: Path) -> None:
@@ -90,16 +122,24 @@ def test_main_window_live_language_switching(qtbot: QtBot, tmp_path: Path) -> No
     col0_pt_again = win._table.horizontalHeaderItem(0)
     assert col0_pt_again is not None and col0_pt_again.text() == "Nome"
     assert win._action_preferences.text() == "Preferências..."
+    set_language(None)
 
 
-def test_preferences_dialog_save_and_apply(qtbot: QtBot, tmp_path: Path) -> None:
+def test_preferences_dialog_save_and_apply(
+    qtbot: QtBot, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
     """PreferencesDialog modifies AppSettings and applies runtime changes."""
+    for var in ("PONTIS_LANG", "LC_ALL", "LC_MESSAGES", "LANGUAGE", "LANG"):
+        monkeypatch.delenv(var, raising=False)
+
     settings_file = tmp_path / "settings.json"
     manager = SettingsManager(settings_file)
     manager.save(AppSettings(language="pt_BR", theme="system"))
 
     dialog = PreferencesDialog(settings_manager=manager)
     qtbot.addWidget(dialog)
+
+    assert dialog._combo_language.findData("system") >= 0
 
     # Change language to EN and theme to dark
     en_idx = dialog._combo_language.findData("en")
@@ -116,8 +156,14 @@ def test_preferences_dialog_save_and_apply(qtbot: QtBot, tmp_path: Path) -> None
     assert reloaded.theme == "dark"
     assert current_language() == "en"
 
-    # Reset language for clean state
-    set_language("pt_BR")
+    # Switch back to system (empty env -> English fallback)
+    sys_idx = dialog._combo_language.findData("system")
+    dialog._combo_language.setCurrentIndex(sys_idx)
+    dialog.apply_settings()
+    assert manager.load().language == "system"
+    assert current_language() == "en"
+
+    set_language(None)
 
 
 def test_about_dialog(qtbot: QtBot) -> None:

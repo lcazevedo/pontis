@@ -14,7 +14,7 @@ if TYPE_CHECKING:
 def test_default_settings() -> None:
     """AppSettings has sensible defaults."""
     s = AppSettings()
-    assert s.language in ("pt_BR", "en")
+    assert s.language == "system"
     assert s.theme == "system"
     assert s.rclone_path == ""
     assert s.check_updates_on_startup is True
@@ -25,7 +25,7 @@ def test_settings_validation_and_sanitization() -> None:
     """Invalid language or theme are sanitized on validate()."""
     s = AppSettings(language="french", theme="neon")
     s.validate()
-    assert s.language == "pt_BR"
+    assert s.language == "system"
     assert s.theme == "system"
 
 
@@ -34,7 +34,7 @@ def test_settings_manager_load_missing_file(tmp_path: Path) -> None:
     cfg_file = tmp_path / "settings.json"
     manager = SettingsManager(cfg_file)
     settings = manager.load()
-    assert settings.language == "pt_BR"
+    assert settings.language == "system"
     assert settings.theme == "system"
 
 
@@ -70,5 +70,5 @@ def test_settings_manager_corrupted_json(tmp_path: Path) -> None:
 
     manager = SettingsManager(cfg_file)
     loaded = manager.load()
-    assert loaded.language == "pt_BR"
+    assert loaded.language == "system"
     assert loaded.theme == "system"

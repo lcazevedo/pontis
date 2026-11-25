@@ -582,6 +582,7 @@ _CATALOG: dict[str, dict[str, str]] = {
         "ui.dialog.preferences.tab_updates": "Updates",
         "ui.dialog.preferences.group_language": "Language",
         "ui.dialog.preferences.language_label": "Application language:",
+        "ui.dialog.preferences.lang_system": "System default (English fallback)",
         "ui.dialog.preferences.lang_pt_br": "Português (Brasil)",
         "ui.dialog.preferences.lang_en": "English",
         "ui.dialog.preferences.group_theme": "Appearance & Contrast",
@@ -1257,6 +1258,7 @@ _CATALOG: dict[str, dict[str, str]] = {
         "ui.dialog.preferences.tab_updates": "Atualizações",
         "ui.dialog.preferences.group_language": "Idioma",
         "ui.dialog.preferences.language_label": "Idioma da aplicação:",
+        "ui.dialog.preferences.lang_system": "Padrão do sistema (inglês como fallback)",
         "ui.dialog.preferences.lang_pt_br": "Português (Brasil)",
         "ui.dialog.preferences.lang_en": "English",
         "ui.dialog.preferences.group_theme": "Aparência e Contraste",
@@ -1354,11 +1356,29 @@ def notify_language_listeners() -> None:
             cb()
 
 
+def detect_system_language() -> str:
+    """Detect the user's system language, falling back to English (``en``)."""
+    for var in ("PONTIS_LANG", "LC_ALL", "LC_MESSAGES", "LANGUAGE", "LANG"):
+        raw = os.environ.get(var, "").strip()
+        if not raw:
+            continue
+        candidate = raw.split(":", 1)[0].strip()
+        if not candidate or candidate.upper() in ("C", "C.UTF-8", "C.UTF8", "POSIX"):
+            continue
+        if candidate.lower().startswith("pt"):
+            return "pt_BR"
+        return DEFAULT_LANGUAGE
+    return DEFAULT_LANGUAGE
+
+
 def set_language(lang: str | None) -> None:
-    """Explicitly set the active UI language (e.g. 'pt_BR' or 'en'), or reset."""
+    """Explicitly set the active UI language ('en', 'pt_BR', or 'system'/None)."""
     global _OVERRIDE_LANG
-    if lang != _OVERRIDE_LANG:
-        _OVERRIDE_LANG = lang
+    normalized = None if lang in (None, "", "system") else lang
+    previous_effective = current_language()
+    previous_override = _OVERRIDE_LANG
+    _OVERRIDE_LANG = normalized
+    if current_language() != previous_effective or normalized != previous_override:
         notify_language_listeners()
 
 
@@ -1366,14 +1386,7 @@ def current_language() -> str:
     """Return the active language ('pt_BR' or 'en')."""
     if _OVERRIDE_LANG is not None:
         return _OVERRIDE_LANG
-
-    for var in ("PONTIS_LANG", "LC_ALL", "LC_MESSAGES", "LANG"):
-        value = os.environ.get(var, "")
-        if value.lower().startswith("pt"):
-            return "pt_BR"
-        if value:
-            return "en"
-    return DEFAULT_LANGUAGE
+    return detect_system_language()
 
 
 def tr(key: str, **params: object) -> str:
