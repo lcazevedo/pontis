@@ -1,0 +1,8 @@
+blank_issues_enabled: false
+contact_links:
+  - name: Security Vulnerability Report
+    url: https://github.com/lcazevedo/pontis/security/advisories/new
+    about: Please report security issues privately through GitHub Security Advisories instead of opening a public issue.
+  - name: FAQ & Documentation
+    url: https://github.com/lcazevedo/pontis/blob/main/docs/FAQ.md
+    about: Check answers to common questions about rclone bisync, --resync, and safety guardrails first.

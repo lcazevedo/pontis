@@ -1,0 +1,75 @@
+name: Bug report
+description: Report an unexpected error or incorrect behavior in Pontis
+title: "[Bug]: "
+labels: ["bug"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thank you for reporting a bug! Please fill in the details below so we can reproduce it.
+        **Important:** remove personal paths, email addresses, or OAuth tokens before pasting logs.
+
+  - type: textarea
+    id: description
+    attributes:
+      label: What happened?
+      description: Clear summary of the bug and what you expected to happen instead.
+    validations:
+      required: true
+
+  - type: textarea
+    id: steps
+    attributes:
+      label: Steps to reproduce
+      description: Numbered steps to trigger the issue.
+      placeholder: |
+        1. Open Pontis / run `pontis ...`
+        2. Select profile ...
+        3. Click ...
+    validations:
+      required: true
+
+  - type: dropdown
+    id: install_method
+    attributes:
+      label: Installation method
+      options:
+        - AppImage
+        - Source (Conda)
+        - Other
+    validations:
+      required: true
+
+  - type: input
+    id: pontis_version
+    attributes:
+      label: Pontis version
+      placeholder: e.g. 1.0.0 or commit hash
+    validations:
+      required: true
+
+  - type: input
+    id: linux_distro
+    attributes:
+      label: Linux distribution & desktop environment
+      placeholder: e.g. Linux Mint 22.1 (Cinnamon) / Ubuntu 24.04 (GNOME)
+    validations:
+      required: true
+
+  - type: textarea
+    id: rclone_version
+    attributes:
+      label: Output of `rclone version`
+      render: bash
+      placeholder: |
+        rclone v1.xx.x
+        - os/version: ...
+    validations:
+      required: true
+
+  - type: textarea
+    id: logs
+    attributes:
+      label: Relevant log output (sanitized)
+      description: Paste relevant lines from History -> Export Log or terminal output.
+      render: text

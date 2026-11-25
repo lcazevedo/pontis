@@ -4,6 +4,7 @@
 
 **Pontis** *(Latin: "of the bridge")* is a Linux desktop application in Python/PySide6 for safe, bidirectional file synchronization between local folders and cloud storage providers, powered by [**rclone**](https://rclone.org).
 
+[![CI](https://github.com/lcazevedo/pontis/actions/workflows/ci.yml/badge.svg)](https://github.com/lcazevedo/pontis/actions/workflows/ci.yml)
 [![License: GPL-3.0-or-later](https://img.shields.io/badge/License-GPL--3.0--or--later-blue.svg)](LICENSE)
 [![Python 3.12+](https://img.shields.io/badge/Python-3.12%2B-3776ab.svg)](https://www.python.org/)
 [![Engine: rclone >= 1.66](https://img.shields.io/badge/Engine-rclone%20%E2%89%A5%201.66-2563eb.svg)](https://rclone.org/)

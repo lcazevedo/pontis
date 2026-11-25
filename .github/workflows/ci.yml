@@ -1,0 +1,176 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: "${{ github.workflow }}-${{ github.ref }}"
+  cancel-in-progress: true
+
+jobs:
+  quality:
+    name: Quality (ruff & mypy)
+    runs-on: ubuntu-24.04
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Python 3.12
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+          cache: pip
+
+      - name: Install development dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install -e ".[dev]"
+
+      - name: Check formatting (ruff format)
+        run: ruff format --check .
+
+      - name: Lint (ruff check)
+        run: ruff check .
+
+      - name: Type-check (mypy)
+        run: mypy
+
+  tests:
+    name: Tests (pytest)
+    runs-on: ubuntu-24.04
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Python 3.12
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+          cache: pip
+
+      - name: Install Qt headless runtime libraries and rclone
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y --no-install-recommends \
+            libdbus-1-3 \
+            libegl1 \
+            libfontconfig1 \
+            libgl1 \
+            libxcb-cursor0 \
+            libxcb-icccm4 \
+            libxcb-image0 \
+            libxcb-keysyms1 \
+            libxcb-randr0 \
+            libxcb-render-util0 \
+            libxcb-shape0 \
+            libxcb-xfixes0 \
+            libxcb-xinerama0 \
+            libxkbcommon-x11-0 \
+            libxkbcommon0 \
+            unzip
+          curl -fsSL -o /tmp/rclone.zip https://downloads.rclone.org/rclone-current-linux-amd64.zip
+          unzip -q /tmp/rclone.zip -d /tmp/rclone-unpack
+          sudo install -m 0755 /tmp/rclone-unpack/rclone-*/rclone /usr/local/bin/rclone
+          rm -rf /tmp/rclone.zip /tmp/rclone-unpack
+          rclone version
+
+      - name: Install project and test dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install -e ".[dev]"
+
+      - name: Run test suite
+        env:
+          QT_QPA_PLATFORM: offscreen
+        run: pytest
+
+  build-appimage:
+    name: Build AppImage (Linux x86_64)
+    needs: [quality, tests]
+    runs-on: ubuntu-22.04
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Python 3.12
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+          cache: pip
+
+      - name: Install Qt runtime libraries and rclone
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y --no-install-recommends \
+            libdbus-1-3 \
+            libegl1 \
+            libfontconfig1 \
+            libgl1 \
+            libxcb-cursor0 \
+            libxcb-icccm4 \
+            libxcb-image0 \
+            libxcb-keysyms1 \
+            libxcb-randr0 \
+            libxcb-render-util0 \
+            libxcb-shape0 \
+            libxcb-xfixes0 \
+            libxcb-xinerama0 \
+            libxkbcommon-x11-0 \
+            libxkbcommon0 \
+            unzip
+          curl -fsSL -o /tmp/rclone.zip https://downloads.rclone.org/rclone-current-linux-amd64.zip
+          unzip -q /tmp/rclone.zip -d /tmp/rclone-unpack
+          sudo install -m 0755 /tmp/rclone-unpack/rclone-*/rclone /usr/local/bin/rclone
+          rm -rf /tmp/rclone.zip /tmp/rclone-unpack
+          rclone version
+
+      - name: Install packaging dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install -e ".[dev,packaging]"
+
+      - name: Build AppImage
+        run: PONTIS_PYTHON="$(which python)" ./packaging/linux/build_appimage.sh
+
+      - name: Smoke-test AppImage CLI, sync, and GUI startup
+        run: |
+          APPIMAGE="$(ls -1 dist/Pontis-*-x86_64.AppImage | head -n 1)"
+          APPIMAGE_EXTRACT_AND_RUN=1 "$APPIMAGE" --help | grep -q "Pontis"
+
+          mkdir -p /tmp/ci_a /tmp/ci_b
+          echo "ci sync check" > /tmp/ci_a/hello.txt
+          APPIMAGE_EXTRACT_AND_RUN=1 "$APPIMAGE" --db /tmp/ci.db profile add ci_sync --a /tmp/ci_a --b /tmp/ci_b
+          APPIMAGE_EXTRACT_AND_RUN=1 "$APPIMAGE" --db /tmp/ci.db run ci_sync --dry-run
+          APPIMAGE_EXTRACT_AND_RUN=1 "$APPIMAGE" --db /tmp/ci.db run ci_sync
+          grep -q "ci sync check" /tmp/ci_b/hello.txt
+
+          set +e
+          QT_QPA_PLATFORM=offscreen HOME=/tmp/ci_home APPIMAGE_EXTRACT_AND_RUN=1 \
+            timeout 4s "$APPIMAGE" >/tmp/gui_out.txt 2>/tmp/gui_err.txt
+          RC=$?
+          set -e
+          cat /tmp/gui_err.txt
+          if [[ "$RC" -ne 124 && "$RC" -ne 0 ]]; then
+            echo "GUI exited unexpectedly with code $RC" >&2
+            exit 1
+          fi
+          if grep -Eqi "Traceback|ImportError|ModuleNotFoundError|error while loading shared libraries|Could not load the Qt platform plugin" /tmp/gui_err.txt; then
+            echo "Detected fatal error in GUI startup!" >&2
+            exit 1
+          fi
+
+      - name: Upload AppImage artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: pontis-linux-x86_64-appimage
+          path: |
+            dist/Pontis-*-x86_64.AppImage
+            dist/Pontis-*-x86_64.AppImage.sha256
+          retention-days: 14
