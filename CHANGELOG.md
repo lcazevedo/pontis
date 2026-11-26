@@ -7,6 +7,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [1.0.0] - 2026-11-26
+
 ### Added
 - **Project Foundation & Architecture:**
   - Python 3.12 package layout (`src/pontis/`) licensed under `GPL-3.0-or-later` with SPDX headers across all source files.
@@ -32,3 +34,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - Bilingual documentation (`README.md`, `README.pt-BR.md`, user guides, Google `client_id` setup guide, FAQ, ADRs, `CONTRIBUTING.md`, `CODE_OF_CONDUCT.md`, `SECURITY.md`, `THIRD_PARTY_LICENSES.md`).
   - Application screenshots generated with fictional profiles in `docs/screenshots/`.
   - `.github/FUNDING.yml` and discreet, non-intrusive voluntary support links (GitHub Sponsors, Ko-fi) in the status bar, Help menu, and About dialog.
+- **Linux Packaging, Locale Default & CI/CD:**
+  - Default language set to `"system"` (detects OS locale with English fallback), while allowing explicit `en` or `pt_BR` selection in Preferences.
+  - Linux `x86_64` AppImage packaging via PyInstaller (`onedir`, without bundling `rclone`), desktop entry, SVG/PNG icons, AppStream metadata, `clean_subprocess_env` guard for external `rclone`, starter Flatpak manifest, and clean Docker verification without Python.
+  - GitHub Actions CI (`ruff`, `mypy`, `pytest`, AppImage build + smoke test), tag-triggered automated GitHub Releases (`v*`), issue/PR templates, and Dependabot.
+
+[Unreleased]: https://github.com/lcazevedo/pontis/compare/v1.0.0...HEAD
+[1.0.0]: https://github.com/lcazevedo/pontis/releases/tag/v1.0.0

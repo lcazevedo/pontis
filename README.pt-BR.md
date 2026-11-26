@@ -71,7 +71,15 @@ Se ainda não tiver o `rclone` instalado, siga as [instruções oficiais de inst
 
 ### AppImage (Linux x86_64)
 
-É possível gerar um pacote AppImage autossuficiente (sem exigir Python instalado na máquina de destino; requer apenas o `rclone >= 1.66.0` externo):
+Baixe `Pontis-1.0.0-x86_64.AppImage` e `Pontis-1.0.0-x86_64.AppImage.sha256` na página de [GitHub Releases](https://github.com/lcazevedo/pontis/releases/latest) (não exige Python instalado; requer apenas `rclone >= 1.66.0` no sistema):
+
+```bash
+sha256sum -c Pontis-1.0.0-x86_64.AppImage.sha256
+chmod +x Pontis-1.0.0-x86_64.AppImage
+./Pontis-1.0.0-x86_64.AppImage
+```
+
+Se preferir gerar e validar o AppImage localmente a partir do código-fonte:
 
 ```bash
 ./packaging/linux/build_appimage.sh

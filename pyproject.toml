@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "pontis"
-version = "0.1.0.dev0"
+version = "1.0.0"
 description = "Bidirectional sync between local folders and the cloud, powered by rclone."
 readme = "README.md"
 requires-python = ">=3.12"
@@ -12,7 +12,7 @@ license = "GPL-3.0-or-later"
 license-files = ["LICENSE"]
 authors = [{ name = "Luis Cesar Azevedo" }]
 classifiers = [
-  "Development Status :: 2 - Pre-Alpha",
+  "Development Status :: 5 - Production/Stable",
   "Environment :: X11 Applications :: Qt",
   "Operating System :: POSIX :: Linux",
   "Programming Language :: Python :: 3.12",

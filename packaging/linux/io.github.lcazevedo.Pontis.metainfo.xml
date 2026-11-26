@@ -31,5 +31,13 @@
   <url type="bugtracker">https://github.com/lcazevedo/pontis/issues</url>
   <url type="donation">https://github.com/sponsors/lcazevedo</url>
 
+  <releases>
+    <release version="1.0.0" date="2026-11-26">
+      <description>
+        <p>Initial stable Linux release of Pontis.</p>
+      </description>
+    </release>
+  </releases>
+
   <content_rating type="oars-1.1"/>
 </component>
