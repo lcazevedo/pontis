@@ -313,9 +313,8 @@ class RcloneAdapter:
         ):
             if event.obj and event.obj not in outcome.transferred_files:
                 outcome.transferred_files.append(event.obj)
-        elif msg.startswith("Deleted"):
-            if event.obj and event.obj not in outcome.deleted_files:
-                outcome.deleted_files.append(event.obj)
+        elif msg.startswith("Deleted") and event.obj and event.obj not in outcome.deleted_files:
+            outcome.deleted_files.append(event.obj)
 
         # Detect files reported as deleted in bisync diff listings
         m_del_file = re.search(r"File was deleted\s+-\s+(.+)", msg)

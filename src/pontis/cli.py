@@ -592,7 +592,7 @@ def _cmd_watch(args: argparse.Namespace, db_path: Path) -> int:
         return 3
 
     config_path: Path = args.rclone_config or (config_dir() / "rclone.conf")
-    if not config_path.is_file():
+    if args.rclone_config and not config_path.is_file():
         print(tr("rclone.config_missing", path=config_path), file=sys.stderr)
         return 3
 
